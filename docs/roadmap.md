@@ -4,8 +4,8 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
 
 ## v1 milestones
 
-- [ ] **M0 Foundation:** repo, workspaces, tooling, docs, determinism scan.
-- [ ] **M1 Battle engine:**
+- [x] **M0 Foundation:** repo, workspaces, tooling, docs, determinism scan.
+- [x] **M1 Battle engine:**
   - deterministic sim, maps and pathfinding;
   - formations, combat, morale, fatigue and ammo;
   - the chain of command and three levels of AI;
