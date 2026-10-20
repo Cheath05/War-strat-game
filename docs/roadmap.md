@@ -10,7 +10,7 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
   - formations, combat, morale, fatigue and ammo;
   - the chain of command and three levels of AI;
   - the headless battle runner.
-- [ ] **M2 HD-2D battlefield (solo):**
+- [x] **M2 HD-2D battlefield (solo):**
   - Three.js scene, pixel art and post effects;
   - camera, controls and HUD;
   - the local relay.
@@ -37,6 +37,13 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
 5. **A linked co-op campaign** with veterans, then a campaign map.
 6. **More factions:** Gauls and Germans, Egypt, Parthia.
 7. **Bigger systems:** sieges, weather, night battles with torchlight, a map editor, gamepad support, spectator tools.
+
+## Known polish items
+
+- Horses read a little like camels: the neck is too upright.
+- Close zoom drops to about 40 fps on this Mac, from overdraw of large alpha-tested sprites.
+  - Options: sort front to back, or lower the render scale when zoomed in.
+- The map edge past the playable area can look dark at some angles.
 
 ## Ideas from game nights
 

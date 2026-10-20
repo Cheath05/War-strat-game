@@ -87,6 +87,7 @@ export const FIELD: ScenarioDef = {
 export const MIRROR: ScenarioDef = {
   ...FIELD,
   id: 'mirror',
+  hidden: true,
   name: 'Civil War',
   blurb: 'Roman legions on both sides (balance test).',
   sides: [FIELD.sides[0], { ...FIELD.sides[0], slots: FIELD.sides[0].slots.map((s) => ({ ...s, key: `${s.key}-2`, deploy: 'north', ai: 'defend' })) }],
@@ -95,6 +96,7 @@ export const MIRROR: ScenarioDef = {
 /** Minimal 1v1 used by tests. */
 export const DUEL: ScenarioDef = {
   id: 'duel',
+  hidden: true,
   name: 'Duel',
   blurb: 'Test scenario.',
   mode: 'test',
@@ -108,4 +110,4 @@ export const DUEL: ScenarioDef = {
 };
 
 /** Duel on the wall-with-a-gap map: used by the narrow-passage test. */
-export const GAP: ScenarioDef = { ...DUEL, id: 'gap', name: 'Gap', map: { id: 'wallgap' } };
+export const GAP: ScenarioDef = { ...DUEL, id: 'gap', name: 'Gap', hidden: true, map: { id: 'wallgap' } };

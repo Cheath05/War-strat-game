@@ -173,6 +173,8 @@ export interface ScenarioDef {
   blurb: string;
   history?: string;
   mode: 'historical' | 'laststand' | 'objective' | 'test';
+  /** Test-only scenarios don't appear in menus. */
+  hidden?: boolean;
   map: { id: string; seed?: number; params?: Record<string, number> };
   sides: [ScenarioSideDef, ScenarioSideDef];
   victory: VictoryRule[];
