@@ -1,0 +1,29 @@
+{
+  "name": "pixel-legions",
+  "private": true,
+  "type": "module",
+  "description": "Pixel Legions: an HD-2D, Total War-style battle game for friends (browser, Windows + Mac)",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node tools/dev.mjs",
+    "host": "npm run build && tsx packages/server/src/index.ts --lan",
+    "build": "npm run build -w @pl/client",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/sim && tsc -p packages/net && tsc -p packages/server && tsc -p packages/client && tsc -p tools",
+    "check:det": "node tools/check-determinism.mjs",
+    "check": "npm run check:det && npm run typecheck && npm run test",
+    "battle": "tsx tools/battle.ts",
+    "bots": "tsx tools/bots.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
