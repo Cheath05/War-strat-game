@@ -28,7 +28,7 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
   - the intro fly-over, settings and How to Play;
   - the performance check: 0.4–0.7 ms per tick on average, headless, in every mode;
   - the Cloudflare Worker and Durable Object relay (tested locally with bots), and the pull request.
-- [ ] **Go live:** the first `npm run deploy` from the user's Cloudflare account.
+- [x] **Go live:** https://pixel-legions.pl-worker.workers.dev (first deployed 2026-10-21; checked with bots over the internet).
 
 ## After v1
 

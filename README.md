@@ -15,6 +15,8 @@ Up to four friends command ancient armies from **Rome, Greece, Carthage, Persia 
 
 ## Play
 
+**Play now: https://pixel-legions.pl-worker.workers.dev**
+
 Open the game link, enter a name, then either **Host** (you get a room code to share) or **Join** with a friend's code. **Solo** runs entirely in your browser.
 
 ## Play together
