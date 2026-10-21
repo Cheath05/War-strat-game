@@ -114,7 +114,7 @@ export class BattleRenderer {
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
     this.renderer.setClearColor(0xd8d2c0);
     this.renderer.shadowMap.enabled = q.shadows;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = q.bloom || q.tiltShift ? THREE.NoToneMapping : THREE.AgXToneMapping;
     this.renderer.domElement.className = 'pl-canvas';
     if (graphics.pixelSize > 1) this.renderer.domElement.style.imageRendering = 'pixelated';
