@@ -10,8 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/dotgothic16": "^5.3.1",
-    "@fontsource/pixelify-sans": "^5.3.0",
     "@pl/net": "*",
     "@pl/sim": "*",
     "postprocessing": "^6.39.5",

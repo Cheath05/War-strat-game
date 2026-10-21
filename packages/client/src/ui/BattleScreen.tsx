@@ -37,14 +37,14 @@ export function BattleScreen({ setup, playerId, exit }: { setup: BattleSetup; pl
       <div ref={host} style={{ position: 'absolute', inset: 0 }} />
       {!session && !error && (
         <div className="overlay">
-          <div className="loading">Preparing the battlefield…</div>
+          <div className="loading">Preparing the battlefield</div>
         </div>
       )}
       {error && (
         <div className="overlay">
-          <div className="ff-window">
-            <p>Something went wrong: {error}</p>
-            <button className="ff-btn" onClick={exit}>
+          <div className="panel col" style={{ gap: 12 }}>
+            <div>Something went wrong: {error}</div>
+            <button className="btn" onClick={exit}>
               Back
             </button>
           </div>

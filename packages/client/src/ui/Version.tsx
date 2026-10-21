@@ -32,27 +32,27 @@ export function VersionBadge() {
       </button>
       {open && (
         <div className="modal-back" onClick={() => setOpen(false)}>
-          <div className="ff-window updates" onClick={(e) => e.stopPropagation()}>
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <h2 className="ff-title" style={{ margin: 0 }}>
-                What's new
-              </h2>
-              <button className="ff-btn small" onClick={() => setOpen(false)}>
+          <div className="window updates" onClick={(e) => e.stopPropagation()}>
+            <header className="window-head">
+              <h2 className="heading">What's new</h2>
+              <button className="btn small ghost" onClick={() => setOpen(false)}>
                 Close
               </button>
+            </header>
+            <div className="window-body">
+              {CHANGELOG.map((r) => (
+                <div key={r.version} className="release">
+                  <h3>
+                    v{r.version} · {r.title} <span className="dim">{r.date}</span>
+                  </h3>
+                  <ul>
+                    {r.items.map((it, i) => (
+                      <li key={i}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-            {CHANGELOG.map((r) => (
-              <section key={r.version}>
-                <h3>
-                  v{r.version} · {r.title} <span className="dim">({r.date})</span>
-                </h3>
-                <ul>
-                  {r.items.map((it, i) => (
-                    <li key={i}>{it}</li>
-                  ))}
-                </ul>
-              </section>
-            ))}
           </div>
         </div>
       )}

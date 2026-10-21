@@ -161,7 +161,7 @@ function MpBattle({
       <div ref={host} style={{ position: 'absolute', inset: 0 }} />
       <Hud session={session} exit={exit} resultExit={isHost ? endBattle : undefined} chat={chat} />
       {status !== 'open' && (
-        <div className="ff-window" style={{ position: 'absolute', top: 100, left: '50%', transform: 'translateX(-50%)', zIndex: 20 }}>
+        <div className="panel hud-banner" style={{ top: 100, zIndex: 20 }}>
           Connection lost: reconnecting…
         </div>
       )}

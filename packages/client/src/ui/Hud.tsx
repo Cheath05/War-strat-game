@@ -5,7 +5,9 @@ import type { GameSession } from '../game/session';
 import type { DetCard, UnitCard } from '../game/hud';
 import { UnitIcon } from './UnitIcon';
 import { Minimap } from './Minimap';
-import { loadGraphics } from '../game/render/quality';
+import { loadGraphics, saveGraphics } from '../game/render/quality';
+import { Segmented } from './controls';
+import { FPS_OPTIONS } from './Settings';
 
 const FORM_NAMES: Record<string, string> = {
   line: 'Line',
@@ -24,6 +26,7 @@ const fmt = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).padSt
 export function Hud({ session, exit, resultExit, chat }: { session: GameSession; exit: () => void; resultExit?: () => void; chat?: (text: string) => void }) {
   const h = useStore(session.hud, (s) => s);
   const [menu, setMenu] = useState(false);
+  const [fpsCap, setFpsCap] = useState(session.limiter.cap);
   const [typing, setTyping] = useState(false);
   const [line, setLine] = useState('');
   useEffect(() => {
@@ -43,15 +46,21 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
   const selectedUnits = h.dets.flatMap((d) => d.units).filter((u) => u.selected);
   return (
     <div className="hud">
-      <div className="ff-window hud-top pl-hud-block">
+      <div className="panel hud-top pl-hud-block">
         {h.sides.map((s, i) => (
           <div key={i} className="side-bar" style={{ order: i === 0 ? 0 : 2 }}>
-            <span style={{ color: s.color }}>{s.name}</span>
+            <span className="name" style={{ color: s.color }}>
+              {s.name}
+            </span>
             <div className="meter">
               <i style={{ width: `${(100 * s.alive) / Math.max(1, s.start)}%`, background: s.color }} />
             </div>
             <span className="dim">{s.alive}</span>
-            {h.notes[i] && <span style={{ color: 'var(--gold)', fontSize: 13 }}>{h.notes[i]}</span>}
+            {h.notes[i] && (
+              <span className="gold" style={{ fontSize: 13 }}>
+                {h.notes[i]}
+              </span>
+            )}
           </div>
         ))}
         <div className="hud-clock" style={{ order: 1 }}>
@@ -59,53 +68,53 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
         </div>
       </div>
       <div className="hud-menu pl-hud-block">
-        {h.paused && <span className="ff-window" style={{ padding: '4px 10px' }}>Paused{h.pausedBy ? ` by ${h.pausedBy}` : ''}</span>}
-        <button className="ff-btn small" onClick={() => setMenu(true)}>
+        {h.paused && <span className="panel hud-tag">Paused{h.pausedBy ? ` by ${h.pausedBy}` : ''}</span>}
+        <button className="btn small" onClick={() => setMenu(true)}>
           Menu
         </button>
       </div>
       {showFps && (
-        <div className="ff-window fps">
+        <div className="panel fps">
           {h.fps} fps · behind {h.backlog}
         </div>
       )}
       <div className="hud-msgs">
         {h.messages.map((m) => (
-          <div key={m.id} className={`ff-window msg ${m.tone}`}>
+          <div key={m.id} className={`panel msg ${m.tone}`}>
             {m.text}
           </div>
         ))}
       </div>
       {h.phase === 'deploy' && (
-        <div className="ff-window deploy-bar pl-hud-block">
+        <div className="panel hud-banner pl-hud-block">
           <span>
-            Deployment: <span className="dim">right-drag to place your units in the golden zone.</span>
+            Deployment <span className="dim">· right-drag to place your units in the golden zone</span>
           </span>
-          <button className={`ff-btn ${h.ready ? 'on' : ''}`} onClick={() => session.issue({ k: 'ready', on: !h.ready })}>
+          <button className={`btn ${h.ready ? 'on' : 'primary'}`} onClick={() => session.issue({ k: 'ready', on: !h.ready })}>
             {h.ready ? 'Waiting…' : 'Ready for battle'}
           </button>
         </div>
       )}
       {h.waiting && h.phase !== 'ended' && (
-        <div className="ff-window" style={{ position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', fontSize: 14 }}>
-          {h.waiting}
-        </div>
+        <div className="panel hud-banner">{h.waiting}</div>
       )}
       {h.myOrder && h.phase === 'battle' && (
-        <div className="ff-window" style={{ position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', fontSize: 14 }}>
-          <span className="dim">Orders from {h.myOrder.from}:</span> <b style={{ color: 'var(--gold)' }}>{h.myOrder.text}</b>
-          <span className="dim"> · how you carry them out is up to you</span>
+        <div className="panel hud-banner">
+          <span>
+            <span className="dim">Orders from {h.myOrder.from}:</span> <span className="gold">{h.myOrder.text}</span>
+            <span className="dim"> · how you carry them out is up to you</span>
+          </span>
         </div>
       )}
       {h.orderMode && (
-        <div className="ff-window order-hint">
+        <div className="panel hud-banner order-hint">
           Click on the map: {ORDER_NAMES[h.orderMode as DetOrder['k']]} <span className="dim">(right click to cancel)</span>
         </div>
       )}
       {h.possessed && (
-        <div className="ff-window possess-hud pl-hud-block">
+        <div className="panel possess-hud pl-hud-block">
           <div>
-            <span style={{ color: 'var(--gold)' }}>♛ Leading the {h.possessed.name}</span>
+            <span className="gold">♛ Leading the {h.possessed.name}</span>
             {h.possessed.hold && <span className="dim"> · holding</span>}
           </div>
           <div className="keys">
@@ -136,9 +145,9 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
       {h.goldMode && h.phase === 'battle' && <GoldBox session={session} />}
       <Minimap session={session} />
       {typing && chat && (
-        <div className="ff-window pl-hud-block" style={{ position: 'absolute', left: 220, bottom: 150, width: 420, padding: 6 }}>
+        <div className="panel chat-line pl-hud-block">
           <input
-            className="ff-input"
+            className="field"
             autoFocus
             style={{ width: '100%' }}
             value={line}
@@ -168,22 +177,32 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
       {h.result && <Result session={session} exit={exit} resultExit={resultExit} />}
       {menu && (
         <div className="overlay pl-hud-block" onClick={() => setMenu(false)}>
-          <div className="ff-window col" style={{ minWidth: 260 }} onClick={(e) => e.stopPropagation()}>
-            <div className="ff-title">Battle menu</div>
-            <button className="ff-btn" onClick={() => setMenu(false)}>
+          <div className="panel battle-menu" onClick={(e) => e.stopPropagation()}>
+            <h2 className="heading">Battle menu</h2>
+            <button className="btn primary" onClick={() => setMenu(false)}>
               Resume
             </button>
-            <button className="ff-btn" onClick={() => session.togglePause()}>
+            <button className="btn" onClick={() => session.togglePause()}>
               {h.paused ? 'Unpause' : 'Pause'}
             </button>
             {h.role !== 'spectator' && (
-              <button className={`ff-btn ${h.auto ? 'on' : ''}`} onClick={() => session.issue({ k: 'auto', on: !h.auto })} title="The AI general and commanders lead your troops until you take them back">
+              <button className={`btn ${h.auto ? 'on' : ''}`} onClick={() => session.issue({ k: 'auto', on: !h.auto })} title="The AI general and commanders lead your troops until you take them back">
                 Let the AI lead my troops: {h.auto ? 'on' : 'off'}
               </button>
             )}
-            <button className="ff-btn" onClick={exit}>
+            <button className="btn" onClick={exit}>
               {session.multiplayer ? 'Leave the room' : 'Leave battle'}
             </button>
+            <div className="label">Frame rate limit</div>
+            <Segmented
+              options={FPS_OPTIONS}
+              value={fpsCap}
+              onChange={(v) => {
+                session.limiter.cap = v;
+                saveGraphics({ ...loadGraphics(), fpsCap: v });
+                setFpsCap(v);
+              }}
+            />
           </div>
         </div>
       )}
@@ -193,7 +212,7 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
 
 const DetPanel = memo(function DetPanel({ d, session, color, isGeneral }: { d: DetCard; session: GameSession; color: string; isGeneral: boolean }) {
   return (
-    <div className="ff-window det">
+    <div className="panel det">
       <div className="det-head">
         <b>{d.name}</b>
         <span>· {d.commander}</span>
@@ -213,15 +232,16 @@ function DetOrderMenu({ session, det }: { session: GameSession; det: number }) {
   const [open, setOpen] = useState(false);
   return (
     <span style={{ position: 'relative' }}>
-      <button className="ff-btn small" onClick={() => setOpen(!open)} title="Give this detachment's commander an order">
+      <button className={`btn small ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} title="Give this detachment's commander an order">
         Orders
       </button>
       {open && (
-        <div className="ff-window col" style={{ position: 'absolute', bottom: 30, left: 0, zIndex: 20, minWidth: 170, padding: 6, gap: 4 }}>
+        <div className="panel col" style={{ position: 'absolute', bottom: 32, left: 0, zIndex: 20, minWidth: 170, padding: 6, gap: 3 }}>
           {DET_ORDERS.map((k) => (
             <button
               key={k}
-              className="ff-btn small"
+              className="btn small"
+              style={{ justifyContent: 'flex-start' }}
               onClick={() => {
                 setOpen(false);
                 session.input?.detOrder(det, k);
@@ -273,12 +293,12 @@ function GoldBox({ session }: { session: GameSession }) {
   const h = useStore(session.hud, (s) => s);
   const [open, setOpen] = useState(false);
   return (
-    <div className="ff-window gold-box pl-hud-block">
-      <div className="row" style={{ gap: 8 }}>
+    <div className="panel gold-box pl-hud-block">
+      <div className="row" style={{ gap: 10 }}>
         <span>
-          Gold <b style={{ color: 'var(--gold)' }}>{h.gold}</b>
+          <span className="dim">Gold</span> <span className="gold">{h.gold}</span>
         </span>
-        <button className={`ff-btn small ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}>
+        <button className={`btn small ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}>
           Reinforce
         </button>
       </div>
@@ -288,10 +308,10 @@ function GoldBox({ session }: { session: GameSession }) {
             {h.armyFull ? 'Your army is at full strength in units.' : 'New units march in from your map edge.'}
           </span>
           {recruitable(h.faction).map((t) => (
-            <button key={t.id} className="ff-btn small recruit-row" disabled={h.armyFull || t.cost > h.gold} title={t.desc} onClick={() => session.issue({ k: 'recruit', t: t.id })}>
+            <button key={t.id} className="btn small recruit-row" disabled={h.armyFull || t.cost > h.gold} title={t.desc} onClick={() => session.issue({ k: 'recruit', t: t.id })}>
               <UnitIcon type={t.id} pal={h.pal} />
               <span style={{ flex: 1, textAlign: 'left' }}>{t.name}</span>
-              <span style={{ color: 'var(--gold)' }}>{t.cost}</span>
+              <span className="gold">{t.cost}</span>
             </button>
           ))}
         </div>
@@ -313,8 +333,8 @@ function OrdersPanel({ session, units }: { session: GameSession; units: UnitCard
   const real = (): import('@pl/sim').Unit[] => ids.map((id) => session.battle.unit(id)!).filter(Boolean);
   const forms = first.forms;
   return (
-    <div className="ff-window hud-orders pl-hud-block">
-      <div className="ff-title" style={{ fontSize: 15 }}>
+    <div className="panel hud-orders pl-hud-block">
+      <div className="title">
         {units.length === 1 ? first.name : `${units.length} units`}
         <span className="dim" style={{ fontSize: 12 }}>
           {' '}
@@ -323,42 +343,42 @@ function OrdersPanel({ session, units }: { session: GameSession; units: UnitCard
       </div>
       <div className="grid">
         {forms.map((f) => (
-          <button key={f} className={`ff-btn small ${first.form === f ? 'on' : ''}`} onClick={() => session.input?.setFormation(real(), f as FormationKind)}>
+          <button key={f} className={`btn small ${first.form === f ? 'on' : ''}`} onClick={() => session.input?.setFormation(real(), f as FormationKind)}>
             {FORM_NAMES[f]}
           </button>
         ))}
       </div>
       <div className="grid">
-        <button className="ff-btn small" onClick={() => session.issue({ k: 'halt', u: ids })}>
+        <button className="btn small" onClick={() => session.issue({ k: 'halt', u: ids })}>
           Halt (H)
         </button>
-        <button className={`ff-btn small ${first.flags & 4 ? 'on' : ''}`} onClick={() => session.issue({ k: 'flag', u: ids, f: 'guard', on: !(first.flags & 4) })}>
+        <button className={`btn small ${first.flags & 4 ? 'on' : ''}`} onClick={() => session.issue({ k: 'flag', u: ids, f: 'guard', on: !(first.flags & 4) })}>
           Guard (G)
         </button>
         {first.maxAmmo > 0 && (
           <>
-            <button className={`ff-btn small ${first.flags & 1 ? 'on' : ''}`} onClick={() => session.issue({ k: 'flag', u: ids, f: 'fire', on: !(first.flags & 1) })}>
+            <button className={`btn small ${first.flags & 1 ? 'on' : ''}`} onClick={() => session.issue({ k: 'flag', u: ids, f: 'fire', on: !(first.flags & 1) })}>
               Fire at will (T)
             </button>
-            <button className={`ff-btn small ${first.flags & 2 ? 'on' : ''}`} onClick={() => session.issue({ k: 'flag', u: ids, f: 'skirmish', on: !(first.flags & 2) })}>
+            <button className={`btn small ${first.flags & 2 ? 'on' : ''}`} onClick={() => session.issue({ k: 'flag', u: ids, f: 'skirmish', on: !(first.flags & 2) })}>
               Skirmish (K)
             </button>
           </>
         )}
         {units.length === 1 && first.officer > 0 && (
-          <button className="ff-btn small" onClick={() => session.input?.possessUnit(first.id)} title="Take command of this unit's officer yourself">
+          <button className="btn small" onClick={() => session.input?.possessUnit(first.id)} title="Take command of this unit's officer yourself">
             ♛ Lead (P)
           </button>
         )}
         {first.abilities.map((a) => (
-          <button key={a.id} className="ff-btn small" disabled={!a.ready} onClick={() => session.issue({ k: 'ability', u: first.id, a: a.id })}>
+          <button key={a.id} className="btn small" disabled={!a.ready} onClick={() => session.issue({ k: 'ability', u: first.id, a: a.id })}>
             {a.name}
             {!a.ready ? ` ${a.cd}s` : ''}
           </button>
         ))}
         {h.goldMode && worn.length > 0 && (
           <button
-            className="ff-btn small"
+            className="btn small"
             title="Fresh men for worn units out of combat, near your General or your map edge. Buys as many as your gold allows."
             onClick={() => worn.forEach((u) => session.issue({ k: 'replenish', u: u.id }))}
           >
@@ -381,14 +401,12 @@ function Result({ session, exit, resultExit }: { session: GameSession; exit: () 
   const best = [...b.world.units].sort((x, y) => y.kills - x.kills)[0];
   return (
     <div className="overlay pl-hud-block">
-      <div className="ff-window result">
-        <div className={`ff-title big`} style={{ color: r.mine ? 'var(--gold)' : 'var(--bad)' }}>
-          {r.winner < 0 ? 'Draw' : r.mine ? 'Victory!' : 'Defeat'}
-        </div>
+      <div className="panel result">
+        <h1 className={`big ${r.winner < 0 ? 'draw' : r.mine ? 'win' : 'lose'}`}>{r.winner < 0 ? 'Draw' : r.mine ? 'Victory' : 'Defeat'}</h1>
         <div className="dim">{r.reason}</div>
         {b.scenario.waves && (
           <div style={{ margin: '6px 0', fontSize: 18 }}>
-            Waves beaten: <b style={{ color: 'var(--gold)' }}>{b.world.sides[0]!.score}</b> of {b.scenario.waves.count}
+            Waves beaten: <span className="gold">{b.world.sides[0]!.score}</span> of {b.scenario.waves.count}
           </div>
         )}
         {h.notes.some(Boolean) && !b.scenario.waves && (
@@ -407,23 +425,23 @@ function Result({ session, exit, resultExit }: { session: GameSession; exit: () 
         </div>
         {best && (
           <div style={{ margin: '8px 0' }}>
-            Most valiant: <span style={{ color: 'var(--gold)' }}>{b.typeOf(best).name}</span> of {b.army(best.army)?.title} with {best.kills} kills
+            Most valiant: <span className="gold">{b.typeOf(best).name}</span> of {b.army(best.army)?.title} with {best.kills} kills
           </div>
         )}
         <div className="row" style={{ justifyContent: 'center' }}>
           {!session.multiplayer && (
-            <button className="ff-btn" onClick={exit}>
+            <button className="btn primary" onClick={exit}>
               Back to the menu
             </button>
           )}
           {session.multiplayer && resultExit && (
-            <button className="ff-btn" onClick={resultExit}>
+            <button className="btn primary" onClick={resultExit}>
               Back to the lobby
             </button>
           )}
           {session.multiplayer && !resultExit && <span className="dim">Waiting for the host to return to the lobby…</span>}
           {session.multiplayer && (
-            <button className="ff-btn" onClick={exit}>
+            <button className="btn" onClick={exit}>
               Leave the room
             </button>
           )}

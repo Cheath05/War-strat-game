@@ -11,6 +11,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.0',
+    date: '21 October 2026',
+    title: 'A new look',
+    items: [
+      'A darker, cleaner interface: glass panels with fine borders and gold highlights instead of the blue windows.',
+      'New font: Geist Pixel. Big titles are built from separate square tiles.',
+      'A new title screen: the Hot Gates at dusk, with the phalanx on the ridge.',
+      'Rules and settings use switches and option bars; the lobby keeps players and chat beside the battle and armies.',
+      'New: a frame rate limit (30 to 144 fps, or none) in Settings and in the battle menu, to keep laptops cooler and quieter.',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '21 October 2026',
     title: 'Thermopylae fixes',

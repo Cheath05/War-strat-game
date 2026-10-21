@@ -87,7 +87,7 @@ export function Minimap({ session }: { session: GameSession }) {
   };
 
   return (
-    <div className="ff-window minimap pl-hud-block">
+    <div className="panel minimap pl-hud-block">
       <canvas ref={ref} width={W} height={H} onMouseDown={click} />
     </div>
   );

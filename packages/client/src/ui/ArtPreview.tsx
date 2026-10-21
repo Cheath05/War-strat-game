@@ -46,12 +46,12 @@ export function ArtPreview() {
     <div style={{ position: 'absolute', inset: 0, overflow: 'auto', background: '#222' }}>
       <div className="row" style={{ padding: 8, position: 'sticky', top: 0, background: '#111', zIndex: 2 }}>
         {FACTIONS.map((f) => (
-          <button key={f.id} className={`ff-btn small ${f.id === faction ? 'on' : ''}`} onClick={() => setFaction(f.id)}>
+          <button key={f.id} className={`btn small ${f.id === faction ? 'on' : ''}`} onClick={() => setFaction(f.id)}>
             {f.name}
           </button>
         ))}
         {[0, 1, 2, 3, 8].map((p) => (
-          <button key={p} className={`ff-btn small ${p === pal ? 'on' : ''}`} onClick={() => setPal(p)}>
+          <button key={p} className={`btn small ${p === pal ? 'on' : ''}`} onClick={() => setPal(p)}>
             colour {p}
           </button>
         ))}
