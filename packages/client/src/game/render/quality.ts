@@ -36,17 +36,28 @@ export interface GraphicsSettings {
 
 const KEY = 'pl.graphics';
 
+let cached: GraphicsSettings | null = null;
+
+/** The player's graphics settings (read once, then kept; the first guess is saved). */
 export function loadGraphics(): GraphicsSettings {
+  if (cached) return { ...cached };
+  let g: GraphicsSettings | null = null;
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...defaultGraphics(), ...JSON.parse(raw) };
+    if (raw) g = { ...defaultGraphics(), ...JSON.parse(raw) };
   } catch {
     // storage unavailable: defaults
   }
-  return defaultGraphics();
+  if (!g) {
+    g = defaultGraphics();
+    saveGraphics(g);
+  }
+  cached = g;
+  return { ...g };
 }
 
 export function saveGraphics(g: GraphicsSettings): void {
+  cached = { ...g };
   try {
     localStorage.setItem(KEY, JSON.stringify(g));
   } catch {
@@ -54,8 +65,15 @@ export function saveGraphics(g: GraphicsSettings): void {
   }
 }
 
-/** A first guess from the GPU and screen; the player can change it in Settings. */
-export function defaultGraphics(): GraphicsSettings {
+let detected: QualityName | null = null;
+
+/**
+ * A first guess at the quality from the GPU's name: probed once per page, and the probe's
+ * WebGL context is released at once. (Browsers keep only about 16 contexts and drop the
+ * oldest, which would be the game's own canvas: the screen would flash blank.)
+ */
+function detectQuality(): QualityName {
+  if (detected) return detected;
   let quality: QualityName = 'medium';
   try {
     const c = document.createElement('canvas');
@@ -64,8 +82,15 @@ export function defaultGraphics(): GraphicsSettings {
     const name = dbg && gl ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : '';
     if (/RTX|Radeon RX|Apple M[2-9] (Pro|Max|Ultra)|M[3-9]/i.test(name)) quality = 'high';
     if (/Intel.*(HD|UHD) Graphics [1-6]|Mali|Adreno|PowerVR/i.test(name)) quality = 'low';
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
   } catch {
     // keep medium
   }
-  return { quality, blur: 'light', pixelSize: 1, showFps: false };
+  detected = quality;
+  return quality;
+}
+
+/** A first guess from the GPU and screen; the player can change it in Settings. */
+export function defaultGraphics(): GraphicsSettings {
+  return { quality: detectQuality(), blur: 'light', pixelSize: 1, showFps: false };
 }
