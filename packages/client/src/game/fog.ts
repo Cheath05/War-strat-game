@@ -9,8 +9,8 @@ const SIGHT_FOOT = 130;
 const SIGHT_HORSE = 160;
 /** Enemies in forest are only seen this close. */
 const HIDDEN_RANGE = 40;
-/** Brightness of ground out of sight (0..255). */
-const UNSEEN = 60;
+/** Visibility of ground out of sight (0..255): mostly greyed out. */
+const UNSEEN = 30;
 
 export class FogOfWar {
   readonly w: number;

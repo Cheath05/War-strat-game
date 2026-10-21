@@ -103,8 +103,11 @@ const TERRAIN_COLOR = /* glsl */ `
   }
   diffuseColor.rgb = col * col; // the textures are authored in sRGB: approximate linear
   if (uFogOn > 0.5) {
+    // Out of sight: grey, dark and a little cool, so the edge of sight reads at a glance
+    // (plain darkening mostly vanishes in the tone mapping).
     float vis = texture2D(uFogTex, vWorld.xz / (uMapTiles * ${TILE.toFixed(1)})).r;
-    diffuseColor.rgb *= mix(0.35, 1.0, vis);
+    float lum = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+    diffuseColor.rgb = mix(lum * vec3(0.3, 0.33, 0.4), diffuseColor.rgb, vis);
   }
 }
 `;
