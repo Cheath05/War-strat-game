@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { music } from '../audio/music';
 import type { BattleSetup } from '@pl/sim';
 import { Title } from '../ui/Title';
 import { SoloSetup } from '../ui/SoloSetup';
@@ -24,6 +25,10 @@ export function inviteCode(): string {
 
 export function App() {
   const [screen, setScreen] = useState<Screen>({ k: 'title' });
+  // The menus have their own theme; rooms and battles choose their music themselves.
+  useEffect(() => {
+    if (screen.k !== 'battle' && screen.k !== 'room') music.play('title');
+  }, [screen.k]);
   if (location.hash === '#art') return <ArtPreview />;
   switch (screen.k) {
     case 'title':

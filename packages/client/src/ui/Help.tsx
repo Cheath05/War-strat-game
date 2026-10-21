@@ -61,6 +61,34 @@ export function Help({ back }: { back: () => void }) {
           and the death of their general. Hit them in the flank, keep your general alive and close, rest tired men, and use the ground: uphill fights are hard and
           forests break formations.
         </p>
+        <h3>The battles</h3>
+        <ul>
+          <li>
+            <b>Thermopylae:</b> hold the pass for 18 minutes against wave after wave. Keep the Phocians on the mountain path: if the Immortals get round, they
+            come down behind you. Xerxes and the Immortals arrive later; a friend can claim them in the lobby and play the Persians.
+          </li>
+          <li>
+            <b>Last Stand:</b> four armies hold a hill fort, a river crossing or the Hot Gates against ten waves, each bigger than the last. Beating a wave pays
+            gold; your score is how many you beat.
+          </li>
+          <li>
+            <b>Capture &amp; Hold:</b> every point you hold scores a victory point a second. First to 1,200 wins.
+          </li>
+          <li>
+            <b>Defend the Bridge:</b> the attackers need sixty men across the river, by the bridge or the fords, within fifteen minutes.
+          </li>
+        </ul>
+        <h3>Gold</h3>
+        <p>
+          In Last Stand and the objective battles, a General recruits the army before the battle (<b>Recruit army</b> in the lobby). What you don't spend, and the
+          gold you earn from kills and beaten waves, buys more in battle: <b>Reinforce</b> (top left) sends new units in from your map edge, and{' '}
+          <b>Replenish</b> refills worn units resting near your general or your map edge.
+        </p>
+        <h3>Fog of war</h3>
+        <p>
+          With fog on (a lobby rule), you only see enemies your troops can see: about 130 m on foot, 160 m on horseback, and only 40 m into forest. Scouts and
+          cavalry earn their keep.
+        </p>
       </div>
     </div>
   );

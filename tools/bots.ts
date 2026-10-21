@@ -1,8 +1,11 @@
 // Bot players for testing multiplayer with fewer friends (or none):
 //   npm run bots -- ABCD 2          two bots join room ABCD on the local relay
 //   npm run bots -- ABCD 1 --url http://192.168.1.20:8090
+//   npm run bots -- ABCD 3 --start --scenario thermopylae --seconds 60
 // Bots take free army slots, ready up, run the battle like a real client, give random
 // orders, and print a line whenever their battle hash disagrees with the relay's verdict.
+// With --start the host bot starts the battle once every bot is in (a scripted test needs
+// no human); at exit, bots in one process compare the hashes they computed.
 
 import WebSocket from 'ws';
 import { Battle, TICKS_PER_TURN, type Command } from '@pl/sim';
@@ -13,6 +16,12 @@ const code = (args.find((a) => /^[A-Za-z]{4}$/.test(a)) ?? '').toUpperCase();
 const count = Number(args.find((a, i) => /^\d+$/.test(a) && args[i - 1] !== '--seconds') ?? 1);
 const urlIdx = args.indexOf('--url');
 const base = urlIdx >= 0 ? args[urlIdx + 1]! : 'http://localhost:8090';
+const autoStart = args.includes('--start');
+const scIdx = args.indexOf('--scenario');
+const scenario = scIdx >= 0 ? args[scIdx + 1]! : '';
+let started = false;
+/** Hashes each bot computed, by tick (all bots run in this process). */
+const checkpoints = new Map<number, number[]>();
 if (!code) {
   console.log('Usage: npm run bots -- <ROOM CODE> [count] [--url http://host:8090]');
   process.exit(1);
@@ -30,7 +39,10 @@ function bot(n: number): void {
   };
   const hooks = {
     send: (c: Command) => send({ t: 'cmd', c }),
-    hash: (tick: number, h: number) => send({ t: 'hash', tick, h }),
+    hash: (tick: number, h: number) => {
+      send({ t: 'hash', tick, h });
+      checkpoints.set(tick, [...(checkpoints.get(tick) ?? []), h]);
+    },
   };
   ws.on('open', () => send({ t: 'hello', name, v: PROTOCOL_VERSION }));
   ws.on('message', (data) => {
@@ -41,6 +53,19 @@ function bot(n: number): void {
         console.log(`${name} joined ${code} as player ${me}`);
         send({ t: 'lobby', op: 'ready', on: true });
         break;
+      case 'lobby': {
+        const host = m.lobby.players.find((p) => p.id === me)?.host;
+        if (!autoStart || started || !host || m.lobby.phase !== 'lobby') break;
+        if (scenario && m.lobby.scenario !== scenario) {
+          send({ t: 'lobby', op: 'scenario', id: scenario });
+          break;
+        }
+        if (m.lobby.players.filter((p) => p.connected).length < count) break;
+        started = true;
+        console.log(`${name}: starting ${m.lobby.scenario}`);
+        send({ t: 'lobby', op: 'start' });
+        break;
+      }
       case 'start':
         driver = new LockstepDriver(Battle.create(m.setup), hooks);
         console.log(`${name}: battle started (${m.setup.scenario})`);
@@ -99,6 +124,13 @@ function bot(n: number): void {
 
 for (let i = 1; i <= count; i++) bot(i);
 
-// --seconds N: leave after N seconds (for scripted tests).
+// --seconds N: leave after N seconds (for scripted tests), saying whether the bots agreed.
 const secIdx = args.indexOf('--seconds');
-if (secIdx >= 0) setTimeout(() => process.exit(0), Number(args[secIdx + 1]) * 1000);
+if (secIdx >= 0) {
+  setTimeout(() => {
+    const full = [...checkpoints].filter(([, hs]) => hs.length === count);
+    const bad = full.filter(([, hs]) => hs.some((h) => h !== hs[0]));
+    if (count > 1) console.log(bad.length ? `DESYNC: bots disagreed at ${bad.length} of ${full.length} checkpoints (first at tick ${bad[0]![0]})` : `In sync: ${full.length} checkpoints agree, up to tick ${full.length ? full[full.length - 1]![0] : 0}`);
+    process.exit(bad.length ? 1 : 0);
+  }, Number(args[secIdx + 1]) * 1000);
+}

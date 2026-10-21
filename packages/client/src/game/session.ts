@@ -4,6 +4,8 @@
 
 import { Battle, TICK_HZ, TICKS_PER_TURN, controls, type Command, type PlayerState, type SimEvent, type TaggedCommand, type Unit } from '@pl/sim';
 import { FogOfWar } from './fog';
+import { music } from '../audio/music';
+import { BattleSounds, ui } from '../audio/sfx';
 import { LockstepDriver } from '@pl/net';
 import { createStore, type Store } from '../app/store';
 import { BattleRenderer } from './render/BattleRenderer';
@@ -75,6 +77,7 @@ export class GameSession {
   private lastArmy = 0;
   private fog: FogOfWar | null = null;
   private fogTimer = 0;
+  private sounds = new BattleSounds();
   /** Paused by the relay (multiplayer), and by whom. */
   remotePaused = false;
   pausedBy = '';
@@ -115,6 +118,7 @@ export class GameSession {
 
   issue(cmd: Command): void {
     this.driver.issue(cmd);
+    if (cmd.k === 'move' || cmd.k === 'attack' || cmd.k === 'det') ui('order');
   }
 
   mount(container: HTMLElement): void {
@@ -127,6 +131,7 @@ export class GameSession {
     this.stopped = false;
     const r = new BattleRenderer(container, this.battle, this.opts.graphics);
     this.renderer = r;
+    music.play(this.battle.world.phase === 'ended' ? 'victory' : 'battle');
     // Dev-only handle for debugging in the browser console.
     if (import.meta.env.DEV) (window as unknown as { __pl: GameSession }).__pl = this;
     r.mine = (u) => this.mine(u);
@@ -239,6 +244,10 @@ export class GameSession {
       this.lastArmy = p.army;
     }
     const mySide = this.mySide;
+    if (this.renderer) this.sounds.onEvents(b.events, this.renderer.rig, mySide, me);
+    for (const e of b.events) {
+      if (e.k === 'end') music.play(e.winner === mySide || (mySide < 0 && e.winner >= 0) ? 'victory' : 'defeat');
+    }
     for (const e of b.events) {
       if (e.k !== 'msg') continue;
       if (e.to && e.to !== me) continue;

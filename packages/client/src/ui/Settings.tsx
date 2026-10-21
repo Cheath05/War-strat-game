@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { loadGraphics, saveGraphics, type GraphicsSettings, type QualityName } from '../game/render/quality';
+import { audio, type AudioPrefs } from '../audio/engine';
+import { ui } from '../audio/sfx';
+
+const LEVELS = [0, 0.25, 0.5, 0.75, 1];
 
 const QUALITIES: { k: QualityName; name: string; desc: string }[] = [
   { k: 'low', name: 'Low', desc: 'No shadows or blur. For older laptops.' },
@@ -10,6 +14,13 @@ const QUALITIES: { k: QualityName; name: string; desc: string }[] = [
 
 export function Settings({ back }: { back: () => void }) {
   const [g, setG] = useState<GraphicsSettings>(loadGraphics());
+  const [a, setA] = useState<AudioPrefs>(audio.prefs);
+  const setAudio = (p: Partial<AudioPrefs>): void => {
+    const next = { ...a, ...p };
+    setA(next);
+    audio.setPrefs(next);
+    if (p.sfx !== undefined) setTimeout(() => ui('chime'), 60);
+  };
   const set = (p: Partial<GraphicsSettings>): void => {
     const next = { ...g, ...p };
     setG(next);
@@ -33,6 +44,19 @@ export function Settings({ back }: { back: () => void }) {
               </button>
             ))}
           </div>
+        </section>
+        <section>
+          <div className="dim">Sound</div>
+          {(['music', 'sfx'] as const).map((k) => (
+            <div key={k} className="row" style={{ marginTop: 4 }}>
+              <span style={{ minWidth: 90 }}>{k === 'music' ? 'Music' : 'Effects'}</span>
+              {LEVELS.map((v) => (
+                <button key={v} className={`ff-btn small ${Math.abs(a[k] - v) < 0.01 ? 'on' : ''}`} onClick={() => setAudio({ [k]: v })}>
+                  {v === 0 ? 'Off' : `${Math.round(v * 100)}%`}
+                </button>
+              ))}
+            </div>
+          ))}
         </section>
         <section>
           <div className="dim">Miniature blur at the top and bottom of the screen.</div>

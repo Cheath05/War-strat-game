@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { music } from '../audio/music';
 import { Battle } from '@pl/sim';
 import type { LobbyState, S2C } from '@pl/net';
 import { RoomConnection, type ConnStatus } from '../net/connection';
@@ -109,6 +110,7 @@ export function Room({ code, exit }: { code: string; exit: () => void }) {
   };
   const isHost = !!lobby?.players.find((p) => p.id === me.current)?.host;
 
+  if (!inBattle) music.play('title');
   if (inBattle) {
     return (
       <MpBattle

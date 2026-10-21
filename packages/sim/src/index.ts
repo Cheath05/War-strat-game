@@ -21,3 +21,4 @@ export { ABILITIES, abilitiesOf } from './roles/abilities';
 export { computeMorale } from './morale/morale';
 export { seedRng } from './math/rng';
 export { hashWorld } from './hash';
+export { PROJ_KIND } from './combat/missiles';

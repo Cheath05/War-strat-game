@@ -1,0 +1,21 @@
+// Pixel Legions on Cloudflare (free plan): static client + one Durable Object per room.
+//   npm run cf:dev    run it locally (no Cloudflare account needed)
+//   npm run deploy    build the client and publish (after `npx wrangler login`)
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "pixel-legions",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "../client/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/ws/*", "/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "GameRoom" }]
+  },
+  // The free plan only offers SQLite-backed Durable Objects.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameRoom"] }],
+  "observability": { "enabled": true }
+}

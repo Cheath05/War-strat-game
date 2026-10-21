@@ -23,10 +23,12 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
   - Carthage, Persia and Macedon, with elephants, scythed chariots and horse archers;
   - Thermopylae, Last Stand, Capture & Hold and Defend the Bridge, with lobby choices for maps and factions;
   - the gold economy (recruiting, reinforcements, refills) and fog of war.
-- [ ] **M6 Launch:**
-  - sound and music, the intro fly-over, settings and How to Play;
-  - the performance pass;
-  - the Cloudflare deploy and the pull request.
+- [x] **M6 Launch:**
+  - synthesised 16-bit music (menu, battle, victory and defeat themes) and battle sound effects, with volume settings;
+  - the intro fly-over, settings and How to Play;
+  - the performance check: 0.4–0.7 ms per tick on average, headless, in every mode;
+  - the Cloudflare Worker and Durable Object relay (tested locally with bots), and the pull request.
+- [ ] **Go live:** the first `npm run deploy` from the user's Cloudflare account.
 
 ## After v1
 

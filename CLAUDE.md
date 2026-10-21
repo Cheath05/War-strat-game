@@ -23,6 +23,8 @@ An HD-2D (Octopath Traveler / Final Fantasy Resonance style), Total War-like bat
 - `npm run check` runs the determinism scan, typecheck and all tests.
 - `npm run battle -- <scenario> --seed N` runs a headless AI-vs-AI battle and prints timing.
 - `npm run host` builds the client and serves the game on the LAN (port 8090).
+- `npm run cf:dev` runs the Cloudflare Worker locally (http://localhost:8787, no account needed); `npm run deploy` publishes it (needs `npx wrangler login`, which the user approves).
+- `npm run bots -- ABCD 3 --start --scenario thermopylae --seconds 60` plays a room with bots and reports whether they stayed in sync.
 
 ## Rules that must hold
 

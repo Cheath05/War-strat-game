@@ -11,11 +11,13 @@
     "host": "npm run build && tsx packages/server/src/index.ts --lan",
     "build": "npm run build -w @pl/client",
     "test": "vitest run",
-    "typecheck": "tsc -p packages/sim && tsc -p packages/net && tsc -p packages/server && tsc -p packages/client && tsc -p tools",
+    "typecheck": "tsc -p packages/sim && tsc -p packages/net && tsc -p packages/server && tsc -p packages/client && tsc -p packages/worker && tsc -p tools",
     "check:det": "node tools/check-determinism.mjs",
     "check": "npm run check:det && npm run typecheck && npm run test",
     "battle": "tsx tools/battle.ts",
-    "bots": "tsx tools/bots.ts"
+    "bots": "tsx tools/bots.ts",
+    "cf:dev": "npm run build && npm run dev -w @pl/worker",
+    "deploy": "npm run build && npm run deploy -w @pl/worker"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

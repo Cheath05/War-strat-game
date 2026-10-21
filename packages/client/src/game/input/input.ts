@@ -3,6 +3,7 @@
 // right-click to run. In possession, WASD steers the officer and hotkeys command his men.
 
 import { spacing, type DetOrder, type FormationKind, type Unit } from '@pl/sim';
+import { ui } from '../../audio/sfx';
 import type { BattleRenderer, FormationGhost } from '../render/BattleRenderer';
 import type { GameSession } from '../session';
 
@@ -87,6 +88,7 @@ export class BattleInput {
   }
 
   select(ids: number[], add = false): void {
+    if (ids.length) ui('select');
     if (!add) this.r.selected.clear();
     for (const id of ids) {
       if (add && this.r.selected.has(id) && ids.length === 1) this.r.selected.delete(id);
