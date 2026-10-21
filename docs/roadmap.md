@@ -45,7 +45,7 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
 - Close zoom drops to about 40 fps on this Mac, from overdraw of large alpha-tested sprites.
   - Options: sort front to back, or lower the render scale when zoomed in.
 - The map edge past the playable area can look dark at some angles.
-- The hill fort's ring wall is only 2.8 m tall, so from high above it reads more like a path than a wall.
+- Walls are drawn as stone blocks with a stretched texture on their sides.
 - The general of a beaten wave rides off to a map corner and waits there.
 - Recruiting can't move units between detachments yet; they group automatically.
 - The art preview (`#art`) only opens on a fresh page load.

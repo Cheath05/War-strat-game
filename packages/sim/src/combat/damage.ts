@@ -3,7 +3,7 @@
 // armour-piercing part.
 
 import type { Battle } from '../battle';
-import { sec } from '../constants';
+import { sec, strengthOf } from '../constants';
 import type { UnitTypeDef } from '../data/types';
 import { clamp, norm } from '../math/det';
 import { rand, randRange } from '../math/rng';
@@ -90,6 +90,7 @@ export function meleeStrike(b: Battle, s: Soldier, u: Unit, t: UnitTypeDef, e: S
 /** Applies damage to a soldier; kills him at 0 hp. */
 export function damage(b: Battle, e: Soldier, eu: Unit, dmg: number, by: Soldier | null, byU: Unit | null): void {
   if (e.hp <= 0) return;
+  if (byU) dmg *= strengthOf(b.world.settings, byU.side);
   e.hp -= dmg;
   b.emit({ k: 'hit', s: e.id, by: by ? by.id : 0, x: e.x, y: e.y, big: dmg > 30 });
   if (e.actK !== ACT.knocked) {

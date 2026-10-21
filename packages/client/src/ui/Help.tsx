@@ -84,6 +84,12 @@ export function Help({ back }: { back: () => void }) {
           gold you earn from kills and beaten waves, buys more in battle: <b>Reinforce</b> (top left) sends new units in from your map edge, and{' '}
           <b>Replenish</b> refills worn units resting near your general or your map edge.
         </p>
+        <h3>Strength and help from the AI</h3>
+        <p>
+          <b>Strength</b> (a rule in the lobby) makes every soldier on one side tougher and harder-hitting: at ×2 each man fights like two. Use it as a
+          handicap when the AI side is too much, or to even out a PVP game. In battle, <b>Menu → Let the AI lead my troops</b> hands your army to the AI
+          general and commanders until you take it back.
+        </p>
         <h3>Fog of war</h3>
         <p>
           With fog on (a lobby rule), you only see enemies your troops can see: about 130 m on foot, 160 m on horseback, and only 40 m into forest. Scouts and

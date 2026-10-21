@@ -144,7 +144,7 @@ export const CARTHAGE: FactionDef = {
       speed: 2.6,
       run: 5.2,
       morale: 38,
-      missile: { kind: 'stone', range: 105, ammo: 22, dmg: 18, ap: 9, reload: 3, acc: 0.64 },
+      missile: { kind: 'stone', range: 75, ammo: 22, dmg: 18, ap: 9, reload: 3, acc: 0.64 },
       forms: ['loose', 'line'],
       radius: 0.38,
       sprite: { body: 'light', armor: 'none', helmet: 'none', crest: 'none', shield: 'none', weapon: 'sling', cloth: 'linen', skin: 'tan' },

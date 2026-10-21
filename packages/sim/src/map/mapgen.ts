@@ -27,6 +27,10 @@ export interface BattleMap {
   pass: Uint8Array;
   /** Distance in tiles to the nearest tile foot soldiers can't enter (for column formations). */
   clear: Uint8Array;
+  /** Like clear, but water and bog count as blocked too: formations on dry ground keep out of it. */
+  dryClear: Uint8Array;
+  /** Height of the top of each lifted wall or cliff tile (0 elsewhere): walls are drawn as blocks. */
+  top: Float64Array;
   props: PropDef[];
   zones: Record<string, ZoneDef>;
   points: Record<string, { x: number; y: number }>;
@@ -91,6 +95,8 @@ export class Painter {
   readonly points: Record<string, { x: number; y: number }> = {};
   readonly routes: Record<string, number[]> = {};
   sea = 0;
+  /** How much lift() raised each corner (so walkable ground can be put back down). */
+  readonly lifted = new Map<number, number>();
   private rngState: number;
 
   constructor(
@@ -252,15 +258,23 @@ export class Painter {
     }
   }
 
-  /** Raises corners of tiles of terrain t by at least h (cliffs, walls). */
-  lift(t: number, h: number): void {
+  /**
+   * Raises corners of tiles of terrain t to at least h metres (a number, or a function of the
+   * corner's position): cliffs and walls. Corners shared with ground soldiers can walk on are
+   * put back down when the map is finished, so nobody stands on the slope of a wall.
+   */
+  lift(t: number, h: number | ((x: number, y: number) => number)): void {
     const W = this.w + 1;
     for (let j = 0; j < this.h; j++) {
       for (let i = 0; i < this.w; i++) {
         if (this.get(i, j) !== t) continue;
         for (const [di, dj] of CORNERS) {
           const k = (j + dj) * W + i + di;
-          this.hgt[k] = Math.max(this.hgt[k]!, h);
+          const before = this.hgt[k]!;
+          const to = typeof h === 'number' ? h : h((i + di) * TILE, (j + dj) * TILE);
+          if (to <= before) continue;
+          this.hgt[k] = to;
+          this.lifted.set(k, (this.lifted.get(k) ?? 0) + (to - before));
         }
       }
     }
@@ -363,30 +377,58 @@ function finish(script: MapScript, p: Painter): BattleMap {
   const pass = new Uint8Array(w * h);
   for (let k = 0; k < w * h; k++) pass[k] = passMask(p.ter[k]!);
   // Clearance: Chebyshev distance (tiles) to the nearest tile foot soldiers can't enter.
-  const clear = new Uint8Array(w * h).fill(255);
-  const queue: number[] = [];
-  for (let k = 0; k < w * h; k++) {
-    if (!(pass[k]! & MOVE.foot)) {
-      clear[k] = 0;
-      queue.push(k);
+  const clear = distanceTo(w, h, (k) => !(pass[k]! & MOVE.foot));
+  const dryClear = distanceTo(w, h, (k) => !(pass[k]! & MOVE.foot) || !!TERRAIN[p.ter[k]!]!.wet);
+  // Walkable ground is never lifted: corners shared with a tile foot soldiers can enter keep
+  // the ground height, and walls and cliffs rise from their own corners. Remember how high
+  // each lifted tile reached first: thin walls lose their slope and are drawn as blocks.
+  const W = w + 1;
+  const top = new Float64Array(w * h);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i;
+      if (pass[k]! & MOVE.foot) continue;
+      let raised = false;
+      let mx = -1e9;
+      for (const [di, dj] of CORNERS) {
+        const c = (j + dj) * W + i + di;
+        if (p.lifted.has(c)) raised = true;
+        mx = Math.max(mx, p.hgt[c]!);
+      }
+      if (raised) top[k] = mx;
     }
   }
-  for (let qi = 0; qi < queue.length; qi++) {
-    const k = queue[qi]!;
-    const i = k % w;
-    const j = (k - i) / w;
-    const d = clear[k]! + 1;
-    for (let dj = -1; dj <= 1; dj++) {
-      for (let di = -1; di <= 1; di++) {
-        const ni = i + di;
-        const nj = j + dj;
-        if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
-        const nk = nj * w + ni;
-        if (clear[nk]! > d) {
-          clear[nk] = d;
-          queue.push(nk);
+  for (const [c, add] of p.lifted) {
+    const ci = c % W;
+    const cj = (c - ci) / W;
+    let walkable = false;
+    for (let dj = -1; dj <= 0 && !walkable; dj++) {
+      for (let di = -1; di <= 0; di++) {
+        const ti = ci + di;
+        const tj = cj + dj;
+        if (ti >= 0 && tj >= 0 && ti < w && tj < h && pass[tj * w + ti]! & MOVE.foot) {
+          walkable = true;
+          break;
         }
       }
+    }
+    if (walkable) p.hgt[c] = p.hgt[c]! - add;
+  }
+  // Dry ground stays above the water surface: only real water and its shore look wet.
+  for (let cj = 0; cj <= h; cj++) {
+    for (let ci = 0; ci <= w; ci++) {
+      let wet = false;
+      for (let dj = -1; dj <= 0 && !wet; dj++) {
+        for (let di = -1; di <= 0; di++) {
+          const ti = ci + di;
+          const tj = cj + dj;
+          if (ti >= 0 && tj >= 0 && ti < w && tj < h && TERRAIN[p.ter[tj * w + ti]!]!.wet) {
+            wet = true;
+            break;
+          }
+        }
+      }
+      if (!wet) p.hgt[cj * W + ci] = Math.max(p.hgt[cj * W + ci]!, p.sea + 0.15);
     }
   }
   return {
@@ -401,12 +443,45 @@ function finish(script: MapScript, p: Painter): BattleMap {
     hgt: p.hgt,
     pass,
     clear,
+    dryClear,
+    top,
     props: p.props,
     zones: p.zones,
     points: p.points,
     routes: p.routes,
     sea: p.sea,
   };
+}
+
+/** Chebyshev distance (tiles, capped at 255) from every tile to the nearest tile where blocked(k). */
+function distanceTo(w: number, h: number, blocked: (k: number) => boolean): Uint8Array {
+  const out = new Uint8Array(w * h).fill(255);
+  const queue: number[] = [];
+  for (let k = 0; k < w * h; k++) {
+    if (blocked(k)) {
+      out[k] = 0;
+      queue.push(k);
+    }
+  }
+  for (let qi = 0; qi < queue.length; qi++) {
+    const k = queue[qi]!;
+    const i = k % w;
+    const j = (k - i) / w;
+    const d = out[k]! + 1;
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let di = -1; di <= 1; di++) {
+        const ni = i + di;
+        const nj = j + dj;
+        if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+        const nk = nj * w + ni;
+        if (out[nk]! > d) {
+          out[nk] = d;
+          queue.push(nk);
+        }
+      }
+    }
+  }
+  return out;
 }
 
 // --- Queries used by the simulation -------------------------------------------------------
@@ -450,6 +525,66 @@ export function terrainSpeed(map: BattleMap, x: number, y: number, cls: number):
 export function clearanceAt(map: BattleMap, x: number, y: number): number {
   return map.clear[tileAt(map, x, y)]!;
 }
+
+/** Clearance to the nearest blocked, wet or boggy tile. */
+export function dryClearanceAt(map: BattleMap, x: number, y: number): number {
+  return map.dryClear[tileAt(map, x, y)]!;
+}
+
+/** Dry ground foot soldiers can stand on (not water, shallows or marsh). */
+export function dryAt(map: BattleMap, x: number, y: number): boolean {
+  if (x < 0 || y < 0 || x >= map.wm || y >= map.hm) return false;
+  const k = tileAt(map, x, y);
+  return (map.pass[k]! & MOVE.foot) !== 0 && !TERRAIN[map.ter[k]!]!.wet;
+}
+
+/**
+ * True when the straight line a→b is passable for mask and nowhere slower going than
+ * minSpeed for that movement class: the shortcut a unit may take without wading through
+ * shallows or bog it could walk round.
+ */
+export function easyLine(map: BattleMap, ax: number, ay: number, bx: number, by: number, mask: number, ci: number, minSpeed: number): boolean {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  const steps = Math.max(1, Math.ceil(d / (TILE * 0.5)));
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
+    const k = tileAt(map, ax + dx * t, ay + dy * t);
+    const x = ax + dx * t;
+    const y = ay + dy * t;
+    if (x < 0 || y < 0 || x >= map.wm || y >= map.hm || !(map.pass[k]! & mask)) return false;
+    if (TERRAIN[map.ter[k]!]!.speed[ci]! < minSpeed) return false;
+  }
+  return true;
+}
+
+/**
+ * Travel cost (metres divided by terrain speed) of the straight line a→b; Infinity if it's
+ * blocked, or (with dry) if it enters water or bog at all.
+ */
+export function lineCost(map: BattleMap, ax: number, ay: number, bx: number, by: number, mask: number, ci: number, dry = false): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  const steps = Math.max(1, Math.ceil(d / (TILE * 0.5)));
+  let cost = 0;
+  for (let s = 0; s < steps; s++) {
+    const t = (s + 0.5) / steps;
+    const x = ax + dx * t;
+    const y = ay + dy * t;
+    if (x < 0 || y < 0 || x >= map.wm || y >= map.hm) return Infinity;
+    const k = tileAt(map, x, y);
+    if (!(map.pass[k]! & mask)) return Infinity;
+    const info = TERRAIN[map.ter[k]!]!;
+    if (dry && info.wet) return Infinity;
+    cost += d / steps / (info.speed[ci]! * (info.wet ? WET_PENALTY : 1));
+  }
+  return cost;
+}
+
+/** Extra cost of wading: paths go round shallows and bog unless crossing them is worth it. */
+export const WET_PENALTY = 0.6;
 
 /** True when the straight line a→b stays on tiles passable for mask (samples every half tile). */
 export function lineClear(map: BattleMap, ax: number, ay: number, bx: number, by: number, mask: number): boolean {

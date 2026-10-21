@@ -6,7 +6,7 @@ import type { Battle } from '../battle';
 import { DT, TILE, sec } from '../constants';
 import type { UnitTypeDef } from '../data/types';
 import { clamp, dist, len, norm, turnToward } from '../math/det';
-import { clearanceAt, passableAt, terrainSpeed } from '../map/mapgen';
+import { clearanceAt, dryAt, dryClearanceAt, easyLine, passableAt, terrainSpeed } from '../map/mapgen';
 import { findPath, classIndex } from '../map/pathfind';
 import { MOVE } from '../map/terrain';
 import type { Soldier, Unit } from '../types';
@@ -161,11 +161,16 @@ function attackMove(b: Battle, u: Unit, t: UnitTypeDef, c: { x: number; y: numbe
   u.st = 'moving';
 }
 
-/** Moves toward a (moving) target: straight when close and clear, else along a refreshed path. */
+/**
+ * Moves toward a (moving) target: straight when close and the way is clear (and doesn't wade
+ * through water or bog that neither end is in), else along a refreshed path.
+ */
 function chaseStep(b: Battle, u: Unit, t: UnitTypeDef, tc: { x: number; y: number }, run: boolean): void {
   const mask = moveMask(t);
+  const ci = classIndex(mask);
   const d = dist(u.ax, u.ay, tc.x, tc.y);
-  const direct = d < 60 && lineClearFast(b, u.ax, u.ay, tc.x, tc.y, mask);
+  const easy = Math.min(0.75, terrainSpeed(b.map, u.ax, u.ay, ci), terrainSpeed(b.map, tc.x, tc.y, ci));
+  const direct = d < 60 && easyLine(b.map, u.ax, u.ay, tc.x, tc.y, mask, ci, easy);
   if (direct) {
     u.path = [tc.x, tc.y];
   } else if (!u.path.length || (b.world.tick + u.id) % sec(2) === 0) {
@@ -174,18 +179,13 @@ function chaseStep(b: Battle, u: Unit, t: UnitTypeDef, tc: { x: number; y: numbe
   if (u.path.length) followPath(b, u, t, run, true);
 }
 
-function lineClearFast(b: Battle, ax: number, ay: number, bx: number, by: number, mask: number): boolean {
-  const steps = Math.ceil(dist(ax, ay, bx, by) / TILE);
-  for (let s = 1; s <= steps; s++) {
-    const f = s / steps;
-    if (!passableAt(b.map, ax + (bx - ax) * f, ay + (by - ay) * f, mask)) return false;
-  }
-  return true;
-}
 
-/** Files that fit at a point, given the clearance on either side. */
+/**
+ * Files that fit at a point, given the clearance on either side. On dry ground, water and
+ * bog count as edges too, so a unit marching along a shore narrows instead of wading.
+ */
 function maxFilesAt(b: Battle, u: Unit, t: UnitTypeDef, x: number, y: number): number {
-  const c = clearanceAt(b.map, x, y);
+  const c = dryAt(b.map, x, y) ? dryClearanceAt(b.map, x, y) : clearanceAt(b.map, x, y);
   if (c >= 20) return u.bw;
   const [sx] = spacing(t, u.form);
   const corridor = Math.max(TILE, (c * 2 - 1) * TILE);

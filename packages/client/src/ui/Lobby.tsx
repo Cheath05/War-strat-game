@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { budgetFor, faction, listScenarios, scenarioDef, unitType, type Settings } from '@pl/sim';
-import { RecruitPanel, ScenarioOptions } from './Recruit';
+import { RecruitPanel, ScenarioOptions, StrengthRow } from './Recruit';
 import type { C2S, LobbyState } from '@pl/net';
 import type { ConnStatus } from '../net/connection';
 
@@ -215,6 +215,7 @@ export function Lobby({
                 </button>
               ))}
             </div>
+            <StrengthRow sc={sc} settings={s} onChange={host ? (strength) => setRule({ strength }) : undefined} />
           </section>
 
           <section style={{ width: 340 }}>

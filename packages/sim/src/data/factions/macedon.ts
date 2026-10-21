@@ -117,7 +117,7 @@ export const MACEDON: FactionDef = {
       speed: 2.5,
       run: 5,
       morale: 44,
-      missile: { kind: 'arrow', range: 120, ammo: 18, dmg: 22, ap: 6, reload: 5, acc: 0.7 },
+      missile: { kind: 'arrow', range: 85, ammo: 18, dmg: 22, ap: 6, reload: 5, acc: 0.7 },
       forms: ['loose', 'line'],
       radius: 0.4,
       sprite: { body: 'light', armor: 'linen', helmet: 'none', crest: 'none', shield: 'small', weapon: 'bow', cloth: 'linen', skin: 'tan' },

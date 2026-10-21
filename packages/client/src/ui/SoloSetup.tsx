@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { armyCost, budgetFor, defaultSettings, faction, listScenarios, recruitedArmy, scenarioChoices, scenarioDef, slotSide, unitType, type BattleSetup, type Settings } from '@pl/sim';
-import { RecruitPanel, ScenarioOptions } from './Recruit';
+import { RecruitPanel, ScenarioOptions, StrengthRow } from './Recruit';
 import type { Screen } from '../app/App';
 import { loadProfile } from '../app/profile';
 
@@ -153,6 +153,7 @@ export function SoloSetup({ go }: { go: (s: Screen) => void }) {
               </button>
             ))}
           </div>
+          <StrengthRow sc={sc} settings={settings} onChange={(strength) => set({ strength })} />
         </section>
         {recruiting && slotDef && (
           <RecruitPanel

@@ -4,7 +4,7 @@
 import type { Battle } from '../battle';
 import { faction, unitType, hasUnitType } from '../data/registry';
 import { dist, norm } from '../math/det';
-import { HP_SCALE } from '../constants';
+import { HP_SCALE, strengthOf } from '../constants';
 import type { Army, Detachment, PlayerState, Unit } from '../types';
 import { spawnUnit, emptyDetOrder } from '../setup';
 import { orderMove } from '../commands';
@@ -95,7 +95,7 @@ export function addMen(b: Battle, u: Unit, n: number): void {
   const c = b.center(u);
   for (let k = 0; k < n; k++) {
     const id = b.newId();
-    const s = { id, u: u.id, x: c.x - u.dx * 3 + (k % 5) * 0.8, y: c.y - u.dy * 3 + Math.floor(k / 5) * 0.8, vx: 0, vy: 0, fx: u.dx, fy: u.dy, hp: t.hp * HP_SCALE, slot: u.sol.length, rank: 0, tgt: 0, cd: 0, act: 0, actK: 0, chg: 0 };
+    const s = { id, u: u.id, x: c.x - u.dx * 3 + (k % 5) * 0.8, y: c.y - u.dy * 3 + Math.floor(k / 5) * 0.8, vx: 0, vy: 0, fx: u.dx, fy: u.dy, hp: t.hp * HP_SCALE * strengthOf(b.world.settings, u.side), slot: u.sol.length, rank: 0, tgt: 0, cd: 0, act: 0, actK: 0, chg: 0 };
     b.addSoldier(s);
     u.sol.push(id);
   }

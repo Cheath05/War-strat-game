@@ -27,6 +27,8 @@ export type Command =
   | { k: 'act'; a: 'charge' | 'rally' | 'volley' | 'hold' | 'formation'; x?: number; y?: number }
   | { k: 'deploy'; u: number; x: number; y: number; dx: number; dy: number }
   | { k: 'ready'; on: boolean }
+  /** Hand my army (or detachment) to the AI, or take it back. */
+  | { k: 'auto'; on: boolean }
   | { k: 'recruit'; t: string }
   | { k: 'replenish'; u: number }
   /** Only the relay sends these: a player dropped or came back. */
@@ -103,6 +105,9 @@ function applyOne(b: Battle, p: PlayerState, c: Command): void {
   switch (c.k) {
     case 'ready':
       p.ready = !!c.on;
+      return;
+    case 'auto':
+      p.auto = !!c.on;
       return;
     case 'deploy': {
       if (!deploy || !finite(c.x, c.y, c.dx, c.dy)) return;

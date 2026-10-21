@@ -42,7 +42,8 @@ describe('combat rules', () => {
     for (const ammo of [true, false]) {
       const b = emptyBattle({ ammo, morale: false });
       const archers = place(b, 1, 'greece.archers', 150, 60, 0, 1, 20);
-      place(b, 0, 'rome.triarii', 150, 150, 0, -1, 20);
+      // 60 m away: inside the archers' 85 m range.
+      place(b, 0, 'rome.triarii', 150, 120, 0, -1, 20);
       run(b, 200);
       if (ammo) expect(archers.ammo).toBe(0);
       else expect(archers.ammo).toBeGreaterThan(0);

@@ -21,3 +21,14 @@ export const sec = (s: number): number => Math.round(s * TICK_HZ);
  * without changing the balance between unit types.
  */
 export const HP_SCALE = 2.5;
+
+/** Strength choices for a side (lobby setting): health and damage are multiplied by it. */
+export const STRENGTHS = [1, 1.5, 2, 3, 5];
+
+/**
+ * A side's strength: every soldier's health and damage are multiplied by it, so at ×2 a
+ * soldier fights like two (a handicap to help a side, such as co-op players against waves).
+ */
+export function strengthOf(settings: { strength?: number[] }, side: number): number {
+  return settings.strength?.[side] ?? 1;
+}

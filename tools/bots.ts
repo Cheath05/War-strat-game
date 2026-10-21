@@ -2,8 +2,9 @@
 //   npm run bots -- ABCD 2          two bots join room ABCD on the local relay
 //   npm run bots -- ABCD 1 --url http://192.168.1.20:8090
 //   npm run bots -- ABCD 3 --start --scenario thermopylae --seconds 60
-// Bots take free army slots, ready up, run the battle like a real client, give random
-// orders, and print a line whenever their battle hash disagrees with the relay's verdict.
+// Bots take free army slots, ready up, run the battle like a real client and let the AI lead
+// their armies (--chaos instead sends random units at random enemies, a stress test), and
+// print a line whenever their battle hash disagrees with the relay's verdict.
 // With --start the host bot starts the battle once every bot is in (a scripted test needs
 // no human); at exit, bots in one process compare the hashes they computed.
 
@@ -17,6 +18,7 @@ const count = Number(args.find((a, i) => /^\d+$/.test(a) && args[i - 1] !== '--s
 const urlIdx = args.indexOf('--url');
 const base = urlIdx >= 0 ? args[urlIdx + 1]! : 'http://localhost:8090';
 const autoStart = args.includes('--start');
+const chaos = args.includes('--chaos');
 const scIdx = args.indexOf('--scenario');
 const scenario = scIdx >= 0 ? args[scIdx + 1]! : '';
 let started = false;
@@ -105,7 +107,15 @@ function bot(n: number): void {
       stateReq = 0;
     }
     if (w.phase === 'deploy') {
-      if (w.tick % 40 === 0) d.issue({ k: 'ready', on: true });
+      if (w.tick % 40 === 0) {
+        d.issue({ k: 'ready', on: true });
+        if (!chaos && !d.battle.player(me)?.auto) d.issue({ k: 'auto', on: true });
+      }
+      return;
+    }
+    if (!chaos) {
+      // Joined mid-battle: hand the army to the AI now.
+      if (w.tick % 40 === 0 && !d.battle.player(me)?.auto) d.issue({ k: 'auto', on: true });
       return;
     }
     // Every few seconds, send a random unit to attack the nearest enemy.
