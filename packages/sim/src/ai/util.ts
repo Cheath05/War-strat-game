@@ -1,9 +1,9 @@
 // Shared helpers for the three levels of AI.
 
 import type { Battle } from '../battle';
+import { strengthOf } from '../constants';
 import { clamp, dist, norm } from '../math/det';
-import { passableAt } from '../map/mapgen';
-import { MOVE } from '../map/terrain';
+import { dryAt } from '../map/mapgen';
 import type { Army, Detachment, Unit } from '../types';
 import { frontageOf } from '../units/formation';
 import { isRanged } from '../combat/missiles';
@@ -30,7 +30,9 @@ export function isMissile(b: Battle, u: Unit): boolean {
 /** Rough fighting value of a unit (for force ratios). */
 export function power(b: Battle, u: Unit): number {
   const t = b.typeOf(u);
-  const per = ((t.atk + t.def + t.armor / 2) * t.hp) / 100;
+  // Strength multiplies both health and damage, so a side's value goes with its square.
+  const st = strengthOf(b.world.settings, u.side);
+  const per = ((t.atk + t.def + t.armor / 2) * t.hp * st * st) / 100;
   return u.sol.length * per * (u.st === 'routing' || u.st === 'shattered' ? 0.1 : 1);
 }
 
@@ -101,24 +103,24 @@ export function towardEnemy(b: Battle, x: number, y: number, side: number, fx: n
   return norm(c.x - x, c.y - y, fx, fy);
 }
 
-/** Is this army run by the AI right now (no human general, or the human dropped)? */
+/** Is this army run by the AI right now (no human general, the human dropped, or handed it over)? */
 export function aiArmy(b: Battle, a: Army): boolean {
   if (!a.ctrl) return true;
   const p = b.player(a.ctrl);
-  return !p || !p.on;
+  return !p || !p.on || !!p.auto;
 }
 
-/** Is this detachment run by its AI commander (no connected human commander)? */
+/** Is this detachment run by its AI commander (no connected human commander, or handed over)? */
 export function aiDetachment(b: Battle, d: Detachment): boolean {
   if (!d.ctrl) return true;
   const p = b.player(d.ctrl);
-  return !p || !p.on;
+  return !p || !p.on || !!p.auto;
 }
 
-/** Free ground (m) to the left and right of (x, y) along (rx, ry) for men on foot, up to max. */
+/** Free dry ground (m) to the left and right of (x, y) along (rx, ry), up to max. */
 export function roomAt(b: Battle, x: number, y: number, rx: number, ry: number, max = 200): [number, number] {
   const side = (s: number): number => {
-    for (let d = 2; d <= max; d += 2) if (!passableAt(b.map, x + rx * s * d, y + ry * s * d, MOVE.foot)) return d - 2;
+    for (let d = 2; d <= max; d += 2) if (!dryAt(b.map, x + rx * s * d, y + ry * s * d)) return d - 2;
     return max;
   };
   return [side(-1), side(1)];
@@ -140,7 +142,7 @@ export function fitRow(b: Battle, x: number, y: number, fx: number, fy: number, 
   while (i < widths.length) {
     const px = x - fx * back;
     const py = y - fy * back;
-    if (passableAt(b.map, px, py, MOVE.foot)) room = roomAt(b, px, py, rx, ry);
+    if (dryAt(b.map, px, py)) room = roomAt(b, px, py, rx, ry);
     const [L, R] = room;
     let w = widths[i]!;
     let j = i + 1;

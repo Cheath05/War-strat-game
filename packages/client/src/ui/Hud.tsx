@@ -176,6 +176,11 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
             <button className="ff-btn" onClick={() => session.togglePause()}>
               {h.paused ? 'Unpause' : 'Pause'}
             </button>
+            {h.role !== 'spectator' && (
+              <button className={`ff-btn ${h.auto ? 'on' : ''}`} onClick={() => session.issue({ k: 'auto', on: !h.auto })} title="The AI general and commanders lead your troops until you take them back">
+                Let the AI lead my troops: {h.auto ? 'on' : 'off'}
+              </button>
+            )}
             <button className="ff-btn" onClick={exit}>
               {session.multiplayer ? 'Leave the room' : 'Leave battle'}
             </button>

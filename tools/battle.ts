@@ -1,5 +1,5 @@
 // Headless AI-vs-AI battle runner and benchmark.
-//   npm run battle -- field --seed 3 --size 1 --minutes 30 [--difficulty 0-3] [--log] [--quiet]
+//   npm run battle -- field --seed 3 --size 1 --minutes 30 [--difficulty 0-3] [--strength 2,1] [--log] [--quiet]
 
 import { Battle, TICK_HZ, defaultSettings, unitType } from '@pl/sim';
 
@@ -15,9 +15,10 @@ const unitSize = Number(opt('size', '1'));
 const quiet = args.includes('--quiet');
 const log = args.includes('--log');
 const difficulty = Number(opt('difficulty', '1'));
+const strength = opt('strength', '1,1').split(',').map(Number);
 
 const mapId = opt('map', '');
-const b = Battle.create({ seed, scenario, settings: { ...defaultSettings(), unitSize, difficulty }, players: [], map: mapId ? { id: mapId, seed, params: {} } : undefined });
+const b = Battle.create({ seed, scenario, settings: { ...defaultSettings(), unitSize, difficulty, strength }, players: [], map: mapId ? { id: mapId, seed, params: {} } : undefined });
 const w = b.world;
 // --attack N: side N assaults, the other defends.
 const attacker = opt('attack', '');

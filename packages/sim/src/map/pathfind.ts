@@ -3,7 +3,7 @@
 
 import { TILE } from '../constants';
 import type { BattleMap } from './mapgen';
-import { lineClear } from './mapgen';
+import { WET_PENALTY, easyLine, lineCost, terrainAt } from './mapgen';
 import { MOVE, TERRAIN } from './terrain';
 
 const SQRT2 = 1.4142135623730951;
@@ -89,7 +89,10 @@ export function findPath(map: BattleMap, sx: number, sy: number, gx: number, gy:
   const goalExact = goalK === (Math.floor(gy / TILE) * w + Math.floor(gx / TILE));
   let goalX = goalExact ? gx : ((goalK % w) + 0.5) * TILE;
   let goalY = goalExact ? gy : (Math.floor(goalK / w) + 0.5) * TILE;
-  if (lineClear(map, sx, sy, goalX, goalY, mask)) return [goalX, goalY];
+  // Straight there when nothing's in the way and the line doesn't wade through water or bog
+  // that neither end is already in.
+  const easy = Math.min(0.75, TERRAIN[terrainAt(map, sx, sy)]!.speed[ci]!, TERRAIN[terrainAt(map, goalX, goalY)]!.speed[ci]!);
+  if (easyLine(map, sx, sy, goalX, goalY, mask, ci, easy)) return [goalX, goalY];
 
   const s = scratch(map);
   s.gen = (s.gen + 1) >>> 0;
@@ -194,8 +197,8 @@ export function findPath(map: BattleMap, sx: number, sy: number, gx: number, gy:
           // No cutting corners past blocked tiles.
           if (!(map.pass[j * w + ni]! & mask) || !(map.pass[nj * w + i]! & mask)) continue;
         }
-        const speed = TERRAIN[map.ter[nk]!]!.speed[ci]!;
-        const step = (di !== 0 && dj !== 0 ? SQRT2 : 1) * TILE / speed;
+        const info = TERRAIN[map.ter[nk]!]!;
+        const step = ((di !== 0 && dj !== 0 ? SQRT2 : 1) * TILE) / (info.speed[ci]! * (info.wet ? WET_PENALTY : 1));
         const ng = gk + step;
         if (s.stamp[nk] !== gen || ng < s.g[nk]!) {
           s.stamp[nk] = gen;
@@ -226,25 +229,48 @@ export function findPath(map: BattleMap, sx: number, sy: number, gx: number, gy:
   return smoothPath(map, sx, sy, pts, mask);
 }
 
-/** String-pulling: keep only the waypoints needed to stay on passable ground. */
+/** Waypoints looked ahead when string-pulling (bounds the work on long paths). */
+const LOOKAHEAD = 48;
+
+/**
+ * String-pulling: skip waypoints while the straight line costs no more than the A* path it
+ * replaces, and never wades where that stretch of the path stayed dry: shortcuts don't cut
+ * through water or bog the path went round (a ford stays a ford).
+ */
 function smoothPath(map: BattleMap, sx: number, sy: number, pts: number[], mask: number): number[] {
+  const ci = classIndex(mask);
+  const n = pts.length / 2;
+  // Cost of the raw path from the start up to each waypoint (index 0 is the start).
+  const cum = [0];
+  // How many waypoints up to each one are in water or bog.
+  const wet = [0];
+  let px = sx;
+  let py = sy;
+  for (let i = 0; i < n; i++) {
+    const x = pts[i * 2]!;
+    const y = pts[i * 2 + 1]!;
+    cum.push(cum[i]! + lineCost(map, px, py, x, y, mask, ci));
+    wet.push(wet[i]! + (TERRAIN[terrainAt(map, x, y)]!.wet ? 1 : 0));
+    px = x;
+    py = y;
+  }
   const out: number[] = [];
+  let cur = 0;
   let cx = sx;
   let cy = sy;
-  let k = 0;
-  const n = pts.length / 2;
-  while (k < n) {
-    let far = k;
-    for (let m = n - 1; m > k; m--) {
-      if (lineClear(map, cx, cy, pts[m * 2]!, pts[m * 2 + 1]!, mask)) {
+  while (cur < n) {
+    let far = cur + 1;
+    for (let m = Math.min(n, cur + LOOKAHEAD); m > cur + 1; m--) {
+      const c = lineCost(map, cx, cy, pts[(m - 1) * 2]!, pts[(m - 1) * 2 + 1]!, mask, ci, wet[m] === wet[cur]);
+      if (c <= cum[m]! - cum[cur]! + 1e-6) {
         far = m;
         break;
       }
     }
-    cx = pts[far * 2]!;
-    cy = pts[far * 2 + 1]!;
+    cx = pts[(far - 1) * 2]!;
+    cy = pts[(far - 1) * 2 + 1]!;
     out.push(cx, cy);
-    k = far + 1;
+    cur = far;
   }
   return out;
 }

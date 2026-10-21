@@ -15,6 +15,7 @@ import {
   scenarioChoices,
   scenarioDef,
   slotSide,
+  STRENGTHS,
   validArmy,
   type ArmySetup,
   type ScenarioDef,
@@ -590,5 +591,9 @@ function sanitizeSettings(s: Settings): Settings {
     difficulty: [0, 1, 2, 3].includes(Number(s.difficulty)) ? Number(s.difficulty) : 1,
     timeLimit: Math.max(0, Math.min(7200, Math.round(Number(s.timeLimit) || 0))),
     friendlyFire: !!s.friendlyFire,
+    strength: [0, 1].map((i) => {
+      const v = Number(Array.isArray(s.strength) ? s.strength[i] : 1);
+      return STRENGTHS.includes(v) ? v : 1;
+    }),
   };
 }

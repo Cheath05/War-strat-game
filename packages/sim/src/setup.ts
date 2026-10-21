@@ -1,7 +1,7 @@
 // Builds the starting world from a battle setup: the scenario, the lobby's players and
 // settings, and (in gold modes) the armies players recruited.
 
-import { HP_SCALE, WORLD_VERSION, sec } from './constants';
+import { HP_SCALE, WORLD_VERSION, sec, strengthOf } from './constants';
 import { TEAM_COLORS } from './data/colors';
 import { faction, scenarioChoices, scenarioDef, unitType } from './data/registry';
 import type { ArmySlotDef, DetDef, ScenarioDef, ZoneDef } from './data/types';
@@ -54,7 +54,7 @@ export interface BattleSetup {
 }
 
 export function defaultSettings(): Settings {
-  return { morale: true, fatigue: true, ammo: true, fog: false, unitSize: 1, difficulty: 1, timeLimit: 0, friendlyFire: false };
+  return { morale: true, fatigue: true, ammo: true, fog: false, unitSize: 1, difficulty: 1, timeLimit: 0, friendlyFire: false, strength: [1, 1] };
 }
 
 export function emptyOrder(): Unit['order'] {
@@ -525,7 +525,7 @@ export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x
   const ry = fx;
   const nSlots = n - 1;
   // Officer first, then the ranks.
-  const hp = t.hp * HP_SCALE;
+  const hp = t.hp * HP_SCALE * strengthOf(w.settings, army.side);
   // Officers are a little tougher than their men.
   let [ox, oy] = [x + fx * 1.2, y + fy * 1.2];
   if (map && !passableAt(map, ox, oy, mask)) [ox, oy] = [x, y];

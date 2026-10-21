@@ -1,7 +1,7 @@
 // The HUD snapshot: what React shows about the battle, rebuilt ten times a second from
 // the world (React never reads the simulation directly).
 
-import { ABILITIES, ORDER_NAMES, TEAM_COLORS, TICK_HZ, abilitiesOf, type Battle, type Tone, type Unit } from '@pl/sim';
+import { ABILITIES, ORDER_NAMES, TEAM_COLORS, TICK_HZ, abilitiesOf, strengthOf, type Battle, type Tone, type Unit } from '@pl/sim';
 import type { GameSession } from './session';
 
 export interface HudMessage {
@@ -68,6 +68,8 @@ export interface HudState {
   role: string;
   gold: number;
   ready: boolean;
+  /** The AI is leading this player's troops (they handed them over). */
+  auto: boolean;
   dets: DetCard[];
   selected: number[];
   messages: HudMessage[];
@@ -112,6 +114,7 @@ export function emptyHud(): HudState {
     role: '',
     gold: 0,
     ready: false,
+    auto: false,
     dets: [],
     selected: [],
     messages: [],
@@ -234,7 +237,7 @@ export function buildHud(s: GameSession): HudState {
   if (me?.poss) {
     const so = b.soldier(me.poss);
     const u = so ? b.unit(so.u) : undefined;
-    if (so && u) possessed = { unit: u.id, name: `${b.typeOf(u).name} ${so.rank === 3 ? 'general' : so.rank === 2 ? 'commander' : 'captain'}`, hp: so.hp, maxHp: b.typeOf(u).hp * 2.5 * 1.5, hold: (u.flags & 16) !== 0 };
+    if (so && u) possessed = { unit: u.id, name: `${b.typeOf(u).name} ${so.rank === 3 ? 'general' : so.rank === 2 ? 'commander' : 'captain'}`, hp: so.hp, maxHp: b.typeOf(u).hp * 2.5 * 1.5 * strengthOf(w.settings, u.side), hold: (u.flags & 16) !== 0 };
   }
   return {
     ok: true,
@@ -255,6 +258,7 @@ export function buildHud(s: GameSession): HudState {
     role: me?.role ?? 'spectator',
     gold: Math.floor(me?.gold ?? 0),
     ready: !!me?.ready,
+    auto: !!me?.auto,
     dets,
     selected: [...(s.renderer?.selected ?? [])],
     messages: s.recentMessages(),

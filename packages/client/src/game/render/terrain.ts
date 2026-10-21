@@ -197,6 +197,37 @@ export function createTerrain(map: BattleMap): TerrainView {
   const { water, waterUniforms } = createWater(map);
   if (water) group.add(water);
 
+  // Walls: stone blocks from the ground up to their top (the ground beside them stays flat,
+  // so nobody seems to walk up them).
+  const walls: number[] = [];
+  for (let k = 0; k < map.w * map.h; k++) if (map.ter[k] === T.wall && map.top[k]! > 0) walls.push(k);
+  let wallMesh: THREE.InstancedMesh | null = null;
+  let wallTex: THREE.DataTexture | null = null;
+  if (walls.length) {
+    const L = TEX * TEX * 4;
+    wallTex = new THREE.DataTexture(texData.slice(T.wall * L, T.wall * L + L), TEX, TEX, THREE.RGBAFormat);
+    wallTex.magFilter = THREE.NearestFilter;
+    wallTex.minFilter = THREE.NearestFilter;
+    wallTex.colorSpace = THREE.SRGBColorSpace;
+    wallTex.needsUpdate = true;
+    const box = new THREE.BoxGeometry(TILE, 1, TILE);
+    box.translate(0, 0.5, 0);
+    wallMesh = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ map: wallTex }), walls.length);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    walls.forEach((k, n) => {
+      const i = k % map.w;
+      const j = (k - i) / map.w;
+      const g = Math.min(map.hgt[j * W + i]!, map.hgt[j * W + i + 1]!, map.hgt[(j + 1) * W + i]!, map.hgt[(j + 1) * W + i + 1]!);
+      const h = Math.max(0.5, map.top[k]! - g);
+      m4.compose(new THREE.Vector3((i + 0.5) * TILE, g - 0.05, (j + 0.5) * TILE), q, new THREE.Vector3(1, h + 0.05, 1));
+      wallMesh!.setMatrixAt(n, m4);
+    });
+    wallMesh.castShadow = true;
+    wallMesh.receiveShadow = true;
+    group.add(wallMesh);
+  }
+
   return {
     group,
     mesh,
@@ -212,6 +243,9 @@ export function createTerrain(map: BattleMap): TerrainView {
       fogTex.dispose();
       water?.geometry.dispose();
       (water?.material as THREE.Material | undefined)?.dispose();
+      wallMesh?.geometry.dispose();
+      (wallMesh?.material as THREE.Material | undefined)?.dispose();
+      wallTex?.dispose();
     },
   };
 }

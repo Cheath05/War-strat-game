@@ -47,7 +47,8 @@ function build(p: Painter): void {
   }
   // Marshes by the shore on the Persian side, hot springs near the gate.
   p.noiseFill(T.marsh, 22, 0.62, 2, (cur, x, y) => cur === T.grass && x < 260 && y < passY(x) - passHalf(x) * 0.35);
-  p.circle(318, passY(318) - 4, 3.5, T.marsh, 1.5);
+  // The hot springs, on the beach west of the gate (not across the road into it).
+  p.circle(306, sea(306) + 3, 2.5, T.marsh, 1);
   p.noiseFill(T.dry, 40, 0.58, 3, (cur) => cur === T.grass);
   // The road along the pass.
   const road: number[] = [];
@@ -65,12 +66,9 @@ function build(p: Painter): void {
   p.rect(wx - 1.5, top, wx + 1.5, mid - 3.5, T.wall);
   p.rect(wx - 1.5, mid + 3.5, wx + 1.5, bottom, T.wall);
 
-  // Heights: the sea floor, the coastal flat, the mountain wall, the path's climb.
-  p.raise((x, y) => {
-    const foot = cliff(x);
-    if (y > foot - 1) return 6 + Math.min(16, (y - foot) * 0.45);
-    return (p.noise(x, y, 60, 9) - 0.5) * 1.2;
-  });
+  // Heights: gentle noise on the coastal flat, the path's climb, then the mountain rising
+  // from the cliff tiles themselves (so the cliff starts exactly where walking stops).
+  p.raise((x, y) => (p.noise(x, y, 60, 9) - 0.5) * 1.2);
   // The path climbs to about 13 m in the middle and comes down at both ends.
   const pathHeight = (t: number): number => 13 * Math.min(1, t / 0.25, (1 - t) / 0.25);
   const segs = ANOPAEA.length / 2 - 1;
@@ -98,11 +96,9 @@ function build(p: Painter): void {
       }
     }
     if (best > 8 * 8) return 0;
-    // Flatten toward the path's own height (the mountain raise put it high).
-    const foot = cliff(x);
-    const mountain = y > foot - 1 ? 6 + Math.min(16, (y - foot) * 0.45) : 0;
-    return pathHeight(at) - mountain;
+    return pathHeight(at);
   });
+  p.lift(T.cliff, (x, y) => 6 + Math.min(16, Math.max(0, y - cliff(x)) * 0.45));
   p.sink(T.water, -2.6);
   p.sink(T.shallow, -0.6);
   p.lift(T.wall, 2.6);

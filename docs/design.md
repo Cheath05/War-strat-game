@@ -86,6 +86,8 @@ Every battle has two sides. If all of you are on one side, it's co-op against th
 - **During the battle:** earn a fifth of each fallen enemy's price, steady income in some modes, and a bonus for each Last Stand wave beaten. Spend it on:
   - new units, which march in from your edge of the map (the Reinforce panel);
   - topping up worn-down units that are out of combat near your General or your map edge (Replenish, at a quarter over the unit's price per man).
+- **Strength** (lobby setting, per side): ×1, ×1.5, ×2, ×3 or ×5 on every soldier's health and damage, so at ×2 a soldier fights like two. A handicap for co-op against the AI or uneven PVP.
+- **Let the AI lead** (battle menu): a player can hand their army or detachment to the AI and take it back; bots do this by default.
 - **Fog of war** (lobby switch): enemies show only within sight of your troops: 130 m on foot, 160 m mounted, and 40 m for enemies in forest. Only the view is fogged: the AI sees everything.
 
 ## The look: HD-2D

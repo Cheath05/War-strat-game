@@ -1,4 +1,4 @@
-import { armyCost, defaultArmy, groupDets, recruitable, roleOf, unitType, type ScenarioDef, type UnitTypeDef } from '@pl/sim';
+import { STRENGTHS, armyCost, defaultArmy, groupDets, recruitable, roleOf, unitType, type ScenarioDef, type Settings, type UnitTypeDef } from '@pl/sim';
 import { UnitIcon } from './UnitIcon';
 
 const ROLE_NAMES = { line: 'Line infantry', missile: 'Missiles', horse: 'Cavalry' } as const;
@@ -133,4 +133,33 @@ export function RecruitPanel({
 function without(units: string[], id: string): string[] {
   const i = units.lastIndexOf(id);
   return i < 0 ? units : [...units.slice(0, i), ...units.slice(i + 1)];
+}
+
+/**
+ * Strength per side (a handicap): every soldier's health and damage are multiplied, so at
+ * ×2 each man fights like two. Read-only without onChange.
+ */
+export function StrengthRow({ sc, settings, onChange }: { sc: ScenarioDef; settings: Settings; onChange?: (strength: number[]) => void }) {
+  const cur = settings.strength ?? [1, 1];
+  return (
+    <div className="col" style={{ gap: 4, marginTop: 6 }}>
+      {sc.sides.map((side, i) => (
+        <div key={i} className="row" style={{ gap: 6 }}>
+          <span className="dim" style={{ minWidth: 110 }} title="Health and damage of every soldier on this side">
+            {side.name} strength
+          </span>
+          {STRENGTHS.map((v) => (
+            <button
+              key={v}
+              disabled={!onChange}
+              className={`ff-btn small ${(cur[i] ?? 1) === v ? 'on' : ''}`}
+              onClick={() => onChange?.(cur.map((x, k) => (k === i ? v : x)))}
+            >
+              ×{v}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }

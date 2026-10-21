@@ -32,6 +32,8 @@ export interface TerrainInfo {
   rough: boolean;
   /** Units here are hidden from enemies beyond short range (fog of war). */
   hides: boolean;
+  /** Water or bog: passable maybe, but troops avoid it when there's dry ground. */
+  wet?: boolean;
   /** Minimap colour. */
   color: number;
 }
@@ -44,9 +46,9 @@ export const TERRAIN: Record<number, TerrainInfo> = {
   [T.sand]: { name: 'Sand', speed: [0.85, 0.85, 0.8], cover: 0, rough: false, hides: false, color: 0xe0cc8c },
   [T.forest]: { name: 'Forest', speed: [0.7, 0.45, 0.35], cover: 0.45, rough: true, hides: true, color: 0x3a5e2a },
   [T.rough]: { name: 'Rocky ground', speed: [0.75, 0.5, 0.5], cover: 0.15, rough: true, hides: false, color: 0x8c8274 },
-  [T.marsh]: { name: 'Marsh', speed: [0.55, 0.4, 0.3], cover: 0.05, rough: true, hides: false, color: 0x5e7a5a },
-  [T.shallow]: { name: 'Shallows', speed: [0.5, 0.6, 0.6], cover: 0, rough: true, hides: false, color: 0x5aa0b0 },
-  [T.water]: { name: 'Deep water', speed: [0, 0, 0], cover: 0, rough: true, hides: false, color: 0x2a5a8c },
+  [T.marsh]: { name: 'Marsh', speed: [0.55, 0.4, 0.3], cover: 0.05, rough: true, hides: false, wet: true, color: 0x5e7a5a },
+  [T.shallow]: { name: 'Shallows', speed: [0.5, 0.6, 0.6], cover: 0, rough: true, hides: false, wet: true, color: 0x5aa0b0 },
+  [T.water]: { name: 'Deep water', speed: [0, 0, 0], cover: 0, rough: true, hides: false, wet: true, color: 0x2a5a8c },
   [T.cliff]: { name: 'Cliffs', speed: [0, 0, 0], cover: 0, rough: true, hides: false, color: 0x6a5e52 },
   [T.wall]: { name: 'Wall', speed: [0, 0, 0], cover: 0, rough: true, hides: false, color: 0x9a9088 },
   [T.bridge]: { name: 'Bridge', speed: [1, 1, 1], cover: 0, rough: false, hides: false, color: 0xa0784c },

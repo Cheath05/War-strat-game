@@ -240,6 +240,8 @@ export interface PlayerState {
   led: number;
   /** Ready to end deployment. */
   ready: boolean;
+  /** Let the AI lead this player's army or detachment (bots, or a player who just watches). */
+  auto?: boolean;
 }
 
 export interface Projectile {
@@ -298,6 +300,8 @@ export interface Settings {
   /** Seconds; 0 for none. */
   timeLimit: number;
   friendlyFire: boolean;
+  /** Per-side strength (health and damage multiplier), [side 0, side 1]; see strengthOf. */
+  strength?: number[];
 }
 
 export interface ScenarioState {
