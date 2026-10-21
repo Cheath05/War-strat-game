@@ -106,7 +106,8 @@ class FakeClient {
         this.driver?.receiveTurn(m.n, m.c ?? []);
         break;
       case 'stateReq':
-        this.stateReq = m.req;
+        if (this.driver) this.stateReq = m.req;
+        else this.send({ t: 'state', req: m.req, tick: -1, data: '' });
         break;
       case 'resync':
         if (!this.driver) this.driver = new LockstepDriver(Battle.load(m.data), this.hooks());
@@ -240,6 +241,25 @@ describe('lockstep over a laggy network', () => {
     expect(rejoined.compared).toBeGreaterThan(10);
     expect(rejoined.mismatched).toBe(0);
     expect(clients[0]!.driver!.battle.player(dropper.id)!.on).toBe(true);
+
+    // Everyone reloads at the same moment: nobody has a state to share, so the relay
+    // rebuilds them all from the setup and the full order log.
+    const tokens = clients.map((c) => c.token);
+    for (const c of clients) {
+      c.online = false;
+      room.close(c.conn);
+      c.driver = null;
+      c.hashes.clear();
+    }
+    play(net, clients, 500);
+    clients.forEach((c, i) => c.connect(tokens[i]!));
+    play(net, clients, 30_000);
+    expect(clients.every((c) => c.driver)).toBe(true);
+    const from = Math.max(...clients.map((c) => c.driver!.battle.world.tick)) - 200;
+    play(net, clients, 10_000);
+    const rebuilt = agree(clients, from);
+    expect(rebuilt.compared).toBeGreaterThan(5);
+    expect(rebuilt.mismatched).toBe(0);
     void HASH_EVERY;
   });
 });

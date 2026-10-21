@@ -18,7 +18,7 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
   - RoomCore relay, lobby and LockstepDriver;
   - resync, reconnect and pause;
   - the Node host, bots and the integration test.
-- [ ] **M4 Roles:** detachment orders and markers, human Commanders, pings, possession with prediction.
+- [x] **M4 Roles:** detachment orders and markers, human Commanders, pings, possession with prediction.
 - [ ] **M5 Content:**
   - Carthage, Persia and Macedon;
   - Thermopylae, Last Stand, Capture & Hold and Defend the Bridge;

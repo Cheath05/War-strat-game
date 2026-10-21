@@ -49,7 +49,8 @@ function bot(n: number): void {
         driver?.receiveTurn(m.n, m.c ?? []);
         break;
       case 'stateReq':
-        stateReq = m.req;
+        if (driver) stateReq = m.req;
+        else send({ t: 'state', req: m.req, tick: -1, data: '' });
         break;
       case 'resync':
         console.log(`${name}: resynced at tick ${m.tick}`);

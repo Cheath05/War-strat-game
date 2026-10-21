@@ -1,7 +1,7 @@
 // The HUD snapshot: what React shows about the battle, rebuilt ten times a second from
 // the world (React never reads the simulation directly).
 
-import { ABILITIES, TEAM_COLORS, TICK_HZ, abilitiesOf, type Battle, type Tone, type Unit } from '@pl/sim';
+import { ABILITIES, ORDER_NAMES, TEAM_COLORS, TICK_HZ, abilitiesOf, type Battle, type Tone, type Unit } from '@pl/sim';
 import type { GameSession } from './session';
 
 export interface HudMessage {
@@ -78,6 +78,8 @@ export interface HudState {
   fps: number;
   backlog: number;
   orderMode: string;
+  /** For a commander: the order their General last gave them. */
+  myOrder: { text: string; from: string } | null;
 }
 
 export function emptyHud(): HudState {
@@ -104,6 +106,7 @@ export function emptyHud(): HudState {
     fps: 0,
     backlog: 0,
     orderMode: '',
+    myOrder: null,
   };
 }
 
@@ -227,5 +230,17 @@ export function buildHud(s: GameSession): HudState {
     fps: s.fps,
     backlog: s.driver.backlog,
     orderMode: s.input?.orderMode ?? '',
+    myOrder: commanderOrder(s),
   };
+}
+
+function commanderOrder(s: GameSession): HudState['myOrder'] {
+  const me = s.me;
+  if (!me || me.role !== 'commander') return null;
+  const d = s.battle.detachment(me.det);
+  if (!d || d.order.k === 'none') return null;
+  const army = s.battle.army(d.army);
+  const from = d.order.by ? (s.battle.player(d.order.by)?.name ?? 'Your general') : (army?.name ?? 'Your general');
+  const target = d.order.t ? s.battle.unit(d.order.t) : undefined;
+  return { text: `${ORDER_NAMES[d.order.k]}${target ? `: ${s.battle.typeOf(target).name}` : ''}`, from };
 }

@@ -58,7 +58,8 @@ export function Room({ code, exit }: { code: string; exit: () => void }) {
           s?.driver.receiveTurn(m.n, m.c ?? []);
           break;
         case 'stateReq':
-          s?.requestState(m.req);
+          if (s) s.requestState(m.req);
+          else c.send({ t: 'state', req: m.req, tick: -1, data: '' });
           break;
         case 'resync':
           if (s) {

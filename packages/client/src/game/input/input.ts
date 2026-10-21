@@ -455,11 +455,15 @@ export class BattleInput {
     if (k.has('[')) rig.rotate(dt * 1.4);
     if (k.has(']')) rig.rotate(-dt * 1.4);
     if (poss) {
-      rig.follow = { x: poss.x, y: poss.y };
-      if (rig.dist > 40) rig.dist = 26;
       this.steerAvatar();
+      this.predictAvatar(dt, poss);
+      const at = this.r.ledPosition() ?? poss;
+      rig.follow = { x: at.x, y: at.y };
+      if (rig.dist > 40) rig.dist = 26;
     } else {
       rig.follow = null;
+      this.r.predict.x = 0;
+      this.r.predict.y = 0;
       let px = 0;
       let py = 0;
       if (k.has('a') || k.has('arrowleft')) px -= 1;
@@ -473,6 +477,29 @@ export class BattleInput {
       this.hoverTimer = 0;
       const u = this.r.pickUnit(this.mouse.x, this.mouse.y);
       this.r.hover = u?.id ?? 0;
+    }
+  }
+
+  /**
+   * Hides the network delay for the officer you lead: draw him where your keys are taking
+   * him (the difference between your intended velocity and the sim's, accumulated), and let
+   * that lead decay as the sim catches up.
+   */
+  private predictAvatar(dt: number, s: { vx: number; vy: number; u: number }): void {
+    const a = this.avatarSent;
+    const u = this.b.unit(s.u);
+    const t = u ? this.b.typeOf(u) : undefined;
+    const speed = t ? (a.run ? t.run : t.speed) : 0;
+    const p = this.r.predict;
+    p.x += (a.mx * speed - s.vx) * dt;
+    p.y += (a.my * speed - s.vy) * dt;
+    const k = Math.exp(-dt / 0.3);
+    p.x *= k;
+    p.y *= k;
+    const l = Math.hypot(p.x, p.y);
+    if (l > 2.5) {
+      p.x *= 2.5 / l;
+      p.y *= 2.5 / l;
     }
   }
 

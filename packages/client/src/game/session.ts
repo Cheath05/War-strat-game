@@ -113,18 +113,33 @@ export class GameSession {
   }
 
   mount(container: HTMLElement): void {
+    // Re-mounting (e.g. after a hot reload in development) starts from a clean view.
+    if (this.renderer) {
+      this.input?.dispose();
+      this.renderer.dispose();
+      this.renderer = null;
+    }
+    this.stopped = false;
     const r = new BattleRenderer(container, this.battle, this.opts.graphics);
     this.renderer = r;
     // Dev-only handle for debugging in the browser console.
     if (import.meta.env.DEV) (window as unknown as { __pl: GameSession }).__pl = this;
     r.mine = (u) => this.mine(u);
+    r.orderMarkers = () => this.orderMarkers();
     this.input = new BattleInput(this, r, container);
     // Start the camera over our own army, looking toward the enemy.
     const me = this.me;
     const army = me ? this.battle.army(me.army) : this.battle.world.armies[0];
     if (army) {
-      const zx = (army.zone[0]! + army.zone[2]!) / 2;
-      const zy = (army.zone[1]! + army.zone[3]!) / 2;
+      let zx = (army.zone[0]! + army.zone[2]!) / 2;
+      let zy = (army.zone[1]! + army.zone[3]!) / 2;
+      // A commander starts over their own detachment.
+      const d = me?.role === 'commander' ? this.battle.detachment(me.det) : undefined;
+      const du = d ? this.battle.unit(d.units[0]!) : undefined;
+      if (du) {
+        zx = du.ax;
+        zy = du.ay;
+      }
       const fx = (this.battle.map.wm / 2 - zx) || 0.001;
       const fy = (this.battle.map.hm / 2 - zy) || 0.001;
       const yaw = Math.atan2(-fx, -fy);
@@ -187,6 +202,35 @@ export class GameSession {
     this.opts.onEvents?.(b.events, b);
   }
 
+  /** Arrows for orders a General gave to human Commanders (or that this Commander received). */
+  orderMarkers(): { fx: number; fy: number; tx: number; ty: number; mine: boolean }[] {
+    const me = this.me;
+    const b = this.battle;
+    if (!me || b.world.phase !== 'battle') return [];
+    const out: { fx: number; fy: number; tx: number; ty: number; mine: boolean }[] = [];
+    for (const d of b.world.dets) {
+      const forMe = me.role === 'commander' && d.id === me.det;
+      const fromMe = me.role === 'general' && d.army === me.army && d.ctrl !== 0;
+      if ((!forMe && !fromMe) || d.order.k === 'none') continue;
+      let fx = 0;
+      let fy = 0;
+      let n = 0;
+      for (const id of d.units) {
+        const u = b.unit(id);
+        if (!u || u.st === 'gone') continue;
+        const c = b.center(u);
+        fx += c.x;
+        fy += c.y;
+        n++;
+      }
+      if (!n) continue;
+      const target = d.order.t ? b.unit(d.order.t) : undefined;
+      const tc = target && target.st !== 'gone' ? b.center(target) : { x: d.order.x, y: d.order.y };
+      out.push({ fx: fx / n, fy: fy / n, tx: tc.x, ty: tc.y, mine: forMe });
+    }
+    return out;
+  }
+
   /** The relay wants our state; sent at the next turn boundary. */
   requestState(req: number): void {
     this.stateReq = req;
@@ -224,6 +268,7 @@ export class GameSession {
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.onResize);
     this.input?.dispose();
+    this.input = null;
     this.renderer?.dispose();
     this.renderer = null;
   }

@@ -55,6 +55,8 @@ export class RoomCore {
   private req = 0;
   /** Outstanding state requests: request id → players waiting for that state. */
   private waiting = new Map<number, Set<number>>();
+  /** Who each request went to, who already failed to answer, and when. */
+  private asked = new Map<number, { source: number; tried: Set<number>; at: number }>();
   private lastActive: number;
 
   constructor(
@@ -182,6 +184,8 @@ export class RoomCore {
       if (this.phase === 'lobby') this.autoClaim(p);
     }
     this.conns.set(conn, p.id);
+    // A room always has a connected host.
+    if (!this.players.some((x) => x.host && x.conn >= 0)) for (const x of this.players) x.host = x === p;
     this.sendTo(conn, { t: 'welcome', you: p.id, token: p.token, lobby: this.lobbyState(), v: PROTOCOL_VERSION });
     this.broadcastLobby();
     this.note(`${p.name} joined.`);
@@ -363,7 +367,9 @@ export class RoomCore {
   }
 
   private tickTurn(): void {
-    if (this.phase !== 'battle' || this.paused) return;
+    if (this.phase !== 'battle') return;
+    if (this.turn % 10 === 0) this.checkStalledRequests();
+    if (this.paused) return;
     for (const p of this.players) p.cmdBudget = Math.min(60, p.cmdBudget + 6);
     const n = this.turn++;
     const c = this.pending;
@@ -418,33 +424,58 @@ export class RoomCore {
   }
 
   /** Asks a healthy player for the battle state, to send to `who`. */
-  private requestState(who: Set<number>, from?: Player): void {
-    const source = from ?? this.players.find((x) => x.conn >= 0 && !who.has(x.id));
+  private requestState(who: Set<number>, from?: Player, tried: Set<number> = new Set()): void {
+    const source = from ?? this.players.find((x) => x.conn >= 0 && !who.has(x.id) && !tried.has(x.id));
     if (!source) {
-      // Nobody else is here: the newcomer starts over from the setup.
-      for (const id of who) {
-        const p = this.byId(id);
-        if (p && this.setup) {
-          this.sendTo(p.conn, { t: 'start', setup: this.setup });
-          this.replayTurns(p, 0);
-        }
-      }
+      this.replayFromStart(who);
       return;
     }
     const req = ++this.req;
     this.waiting.set(req, new Set(who));
+    this.asked.set(req, { source: source.id, tried: new Set([...tried, source.id]), at: this.io.now() });
     this.sendTo(source.conn, { t: 'stateReq', req });
+  }
+
+  /** Nobody can share a state: rebuild from the setup and every turn so far. */
+  private replayFromStart(who: Set<number>): void {
+    if (!this.setup) return;
+    for (const id of who) {
+      const p = this.byId(id);
+      if (p && p.conn >= 0) {
+        this.sendTo(p.conn, { t: 'start', setup: this.setup });
+        this.replayTurns(p, 0);
+      }
+    }
   }
 
   private stateArrived(req: number, tick: number, data: string): void {
     const who = this.waiting.get(req);
-    if (!who || !this.setup || typeof data !== 'string') return;
+    const ask = this.asked.get(req);
+    if (!who || !this.setup) return;
     this.waiting.delete(req);
+    this.asked.delete(req);
+    if (typeof data !== 'string' || !data || tick < 0) {
+      // That player had no battle to share (they are rejoining too): try someone else.
+      this.requestState(who, undefined, ask?.tried ?? new Set());
+      return;
+    }
     for (const id of who) {
       const p = this.byId(id);
       if (!p || p.conn < 0) continue;
       this.sendTo(p.conn, { t: 'resync', tick, data, setup: this.setup });
       this.replayTurns(p, Math.floor(tick / TICKS_PER_TURN));
+    }
+  }
+
+  /** State requests nobody answered within a few seconds go elsewhere. */
+  private checkStalledRequests(): void {
+    const now = this.io.now();
+    for (const [req, ask] of this.asked) {
+      if (now - ask.at < 6000) continue;
+      const who = this.waiting.get(req);
+      this.asked.delete(req);
+      this.waiting.delete(req);
+      if (who) this.requestState(who, undefined, ask.tried);
     }
   }
 

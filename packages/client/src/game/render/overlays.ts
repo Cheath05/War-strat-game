@@ -106,6 +106,18 @@ export class Overlays {
     this.seg(bx, by, bx - ux * s + uy * s * 0.6, by - uy * s - ux * s * 0.6, c);
   }
 
+  /** A bold arrow: several parallel strokes, so it reads from far away. */
+  boldArrow(ax: number, ay: number, bx: number, by: number, c: THREE.Color, width = 0.9): void {
+    const d = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) || 1;
+    const nx = -(by - ay) / d;
+    const ny = (bx - ax) / d;
+    for (const k of [-1, -0.5, 0, 0.5, 1]) {
+      const ox = nx * k * width * 0.5;
+      const oy = ny * k * width * 0.5;
+      this.arrow(ax + ox, ay + oy, bx + ox, by + oy, c);
+    }
+  }
+
   end(): void {
     const geo = this.lines.geometry;
     geo.setDrawRange(0, this.n * 2);

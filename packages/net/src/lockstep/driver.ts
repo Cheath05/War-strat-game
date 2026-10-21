@@ -17,6 +17,10 @@ export interface DriverHooks {
 
 const TICK_MS = 1000 / TICK_HZ;
 
+/** Wall-clock milliseconds (only for pacing; never feeds the simulation). */
+const clock = (globalThis as { performance?: { now(): number } }).performance;
+const now = (): number => (clock ? clock.now() : Date.now());
+
 export class LockstepDriver {
   battle: Battle;
   /** Commands per turn number, waiting to be simulated. */
@@ -58,17 +62,27 @@ export class LockstepDriver {
       this.alpha = 1;
       return 0;
     }
-    // Catch up gently when the relay is ahead of us, hard when far behind.
-    const speed = this.backlog > 40 ? 8 : this.backlog > 6 ? 1.5 : 1;
-    this.acc += Math.min(dtMs, 250) * speed;
     let n = 0;
-    const maxPerFrame = this.backlog > 40 ? 40 : 6;
-    while (this.acc >= TICK_MS && w.tick < limit && n < maxPerFrame) {
-      this.stepOne();
-      this.acc -= TICK_MS;
-      n++;
+    if (this.backlog > 20) {
+      // Far behind (the tab was in the background, or we just rejoined): catch up as fast
+      // as the frame budget allows, about 12 ms of simulation per frame.
+      const start = now();
+      while (w.tick < limit - 2 && now() - start < 12) {
+        this.stepOne();
+        n++;
+      }
+      this.acc = 0;
+    } else {
+      // Close to the relay: real time, a little faster when a few ticks behind.
+      const speed = this.backlog > 6 ? 1.5 : 1;
+      this.acc += Math.min(dtMs, 250) * speed;
+      while (this.acc >= TICK_MS && w.tick < limit && n < 6) {
+        this.stepOne();
+        this.acc -= TICK_MS;
+        n++;
+      }
+      if (w.tick >= limit) this.acc = Math.min(this.acc, TICK_MS);
     }
-    if (w.tick >= limit) this.acc = Math.min(this.acc, TICK_MS);
     this.backlog = limit - w.tick;
     this.alpha = Math.max(0, Math.min(1, this.acc / TICK_MS));
     return n;

@@ -85,6 +85,12 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
           </button>
         </div>
       )}
+      {h.myOrder && h.phase === 'battle' && (
+        <div className="ff-window" style={{ position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', fontSize: 14 }}>
+          <span className="dim">Orders from {h.myOrder.from}:</span> <b style={{ color: 'var(--gold)' }}>{h.myOrder.text}</b>
+          <span className="dim"> · how you carry them out is up to you</span>
+        </div>
+      )}
       {h.orderMode && (
         <div className="ff-window order-hint">
           Click on the map: {ORDER_NAMES[h.orderMode as DetOrder['k']]} <span className="dim">(right click to cancel)</span>

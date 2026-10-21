@@ -47,6 +47,7 @@ export type C2S =
   | ({ t: 'lobby' } & LobbyOp)
   | { t: 'cmd'; c: Command }
   | { t: 'hash'; tick: number; h: number }
+  /** Answer to stateReq; tick -1 and empty data mean "I have no battle to share". */
   | { t: 'state'; req: number; tick: number; data: string }
   | { t: 'chat'; text: string }
   | { t: 'ping'; x: number; y: number; kind: string }

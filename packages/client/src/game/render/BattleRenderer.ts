@@ -73,6 +73,10 @@ export class BattleRenderer {
   visible = (_u: Unit): boolean => true;
   /** Deployment zone to highlight, if any. */
   zone: number[] | null = null;
+  /** Orders to show on the ground (a General's orders to their Commanders). */
+  orderMarkers: () => { fx: number; fy: number; tx: number; ty: number; mine: boolean }[] = () => [];
+  /** Local prediction for the officer this player leads: drawn this far ahead of the sim. */
+  predict = { x: 0, y: 0 };
 
   private post: PostFX | null = null;
   private terrain: TerrainView;
@@ -143,7 +147,8 @@ export class BattleRenderer {
     ring.holes.push(new THREE.Path([new THREE.Vector2(0.5, 0.5), new THREE.Vector2(0.5, map.hm - 0.5), new THREE.Vector2(map.wm - 0.5, map.hm - 0.5), new THREE.Vector2(map.wm - 0.5, 0.5)]));
     const skirtGeo = new THREE.ShapeGeometry(ring);
     skirtGeo.rotateX(Math.PI / 2);
-    const skirt = new THREE.Mesh(skirtGeo, new THREE.MeshLambertMaterial({ color: new THREE.Color(0x4a6a32).convertSRGBToLinear(), side: THREE.DoubleSide }));
+    // (THREE.Color takes sRGB hex and stores linear values already.)
+    const skirt = new THREE.Mesh(skirtGeo, new THREE.MeshLambertMaterial({ color: new THREE.Color(0x4f7a34), side: THREE.DoubleSide }));
     skirt.position.y = -0.4;
     this.scene.add(skirt);
 
@@ -291,6 +296,12 @@ export class BattleRenderer {
     return toScreen(this.rig.camera, x, heightAt(map, Math.min(map.wm - 0.01, Math.max(0, x)), Math.min(map.hm - 0.01, Math.max(0, y))) + lift, y, this.w, this.h);
   }
 
+  /** Where the led officer appears (sim position plus local prediction). */
+  ledPosition(): { x: number; y: number } | null {
+    const s = this.battle.soldier(this.possessed);
+    return s ? { x: s.x + this.predict.x, y: s.y + this.predict.y } : null;
+  }
+
   /** The unit with a soldier (or banner) nearest the screen point. */
   pickUnit(px: number, py: number, filter?: (u: Unit) => boolean): Unit | undefined {
     const b = this.battle;
@@ -419,8 +430,12 @@ export class BattleRenderer {
       const t = b.typeOf(u);
       const army = b.army(u.army)!;
       const p = this.prev.get(s.id);
-      const x = p ? p[0] + (s.x - p[0]) * alpha : s.x;
-      const y = p ? p[1] + (s.y - p[1]) * alpha : s.y;
+      let x = p ? p[0] + (s.x - p[0]) * alpha : s.x;
+      let y = p ? p[1] + (s.y - p[1]) * alpha : s.y;
+      if (s.id === this.possessed) {
+        x += this.predict.x;
+        y += this.predict.y;
+      }
       const gh = heightAt(map, Math.min(map.wm - 0.01, Math.max(0, x)), Math.min(map.hm - 0.01, Math.max(0, y)));
       const dot = s.fx * fwdX + s.fy * fwdY;
       let view: View = 2;
@@ -547,7 +562,15 @@ export class BattleRenderer {
     }
     if (this.possessed) {
       const s = b.soldier(this.possessed);
-      if (s) o.circle(s.x, s.y, 1.4, gold, 16);
+      if (s) o.circle(s.x + this.predict.x, s.y + this.predict.y, 1.4, gold, 16);
+    }
+    // Orders from a General to their Commanders: an arrow to the objective and a pulsing ring.
+    const pulse = 2.5 + (this.time % 1.2) * 2;
+    for (const m of this.orderMarkers()) {
+      const c = m.mine ? gold : new THREE.Color(0.55, 0.85, 1.0);
+      o.boldArrow(m.fx, m.fy, m.tx, m.ty, c, 1.2);
+      o.circle(m.tx, m.ty, pulse, c, 20);
+      o.circle(m.tx, m.ty, pulse + 0.4, c, 20);
     }
     o.end();
   }
