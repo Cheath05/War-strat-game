@@ -8,6 +8,7 @@ import { Help } from '../ui/Help';
 import { Settings } from '../ui/Settings';
 import { ArtPreview } from '../ui/ArtPreview';
 import { Room } from '../ui/Room';
+import { VersionBadge } from '../ui/Version';
 
 export type Screen =
   | { k: 'title' }
@@ -32,13 +33,33 @@ export function App() {
   if (location.hash === '#art') return <ArtPreview />;
   switch (screen.k) {
     case 'title':
-      return <Title go={setScreen} />;
+      return (
+        <>
+          <Title go={setScreen} />
+          <VersionBadge />
+        </>
+      );
     case 'solo':
-      return <SoloSetup go={setScreen} />;
+      return (
+        <>
+          <SoloSetup go={setScreen} />
+          <VersionBadge />
+        </>
+      );
     case 'help':
-      return <Help back={() => setScreen({ k: 'title' })} />;
+      return (
+        <>
+          <Help back={() => setScreen({ k: 'title' })} />
+          <VersionBadge />
+        </>
+      );
     case 'settings':
-      return <Settings back={() => setScreen({ k: 'title' })} />;
+      return (
+        <>
+          <Settings back={() => setScreen({ k: 'title' })} />
+          <VersionBadge />
+        </>
+      );
     case 'room':
       return (
         <Room

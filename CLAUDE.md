@@ -35,6 +35,7 @@ An HD-2D (Octopath Traveler / Final Fantasy Resonance style), Total War-like bat
   - state is plain JSON (no class instances, Maps or typed arrays), iterated in array order.
   - Caches such as the spatial grid, paths and the map are rebuilt from state, never stored in it.
 - **The renderer only reads.** The client never changes sim state directly; every change is a command that goes through the relay.
+- **Updates:** with every deploy, add an entry to `packages/client/src/app/changelog.ts` (players open it from the version number at the bottom of the menus); the first entry's version is the game's version.
 - **Ports:** this game uses 5190 and 8090. Footsim (Soccer-Game) uses 8000, 8765 and 5173. Never touch Soccer-Game.
 - **This Mac has 8 GB of RAM and 4 performance cores.**
   - Run heavy checks one at a time, with at most 2 browser tabs.

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { budgetFor, faction, listScenarios, scenarioDef, unitType, type Settings } from '@pl/sim';
 import { RecruitPanel, ScenarioOptions, StrengthRow } from './Recruit';
+import { VersionBadge } from './Version';
 import type { C2S, LobbyState } from '@pl/net';
 import type { ConnStatus } from '../net/connection';
 
@@ -248,6 +249,7 @@ export function Lobby({
           </section>
         </div>
 
+        <VersionBadge />
         {recruiting && mySlot && (
           <RecruitPanel
             title={`${mySlot.sl.name}, ${mySlot.sl.title}`}
