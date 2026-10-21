@@ -7,10 +7,17 @@
 import {
   TICK_HZ,
   TICKS_PER_TURN,
+  armyCost,
+  budgetFor,
   defaultSettings,
   listScenarios,
+  recruitedArmy,
+  scenarioChoices,
   scenarioDef,
+  slotSide,
+  validArmy,
   type ArmySetup,
+  type ScenarioDef,
   type BattleSetup,
   type Command,
   type Settings,
@@ -42,7 +49,7 @@ export class RoomCore {
   private settings: Settings = defaultSettings();
   private map: LobbyState['map'] = null;
   private armies: ArmySetup[] = [];
-  private gold = 6000;
+  private options: Record<string, string> = {};
   private phase: LobbyState['phase'] = 'lobby';
   private setup: BattleSetup | null = null;
   private turn = 0;
@@ -64,6 +71,7 @@ export class RoomCore {
     private io: RoomTransport,
   ) {
     this.scenario = listScenarios().find((s) => !s.hidden)?.id ?? 'field';
+    this.options = scenarioChoices(this.scenario);
     this.lastActive = io.now();
   }
 
@@ -220,8 +228,13 @@ export class RoomCore {
       map: this.map,
       players: this.players.map(({ id, name, connected, ready, role, slot, det, host }) => ({ id, name, connected, ready, role, slot, det, host })),
       armies: this.armies,
-      gold: this.gold,
+      options: this.options,
     };
+  }
+
+  /** The scenario with the lobby's choices applied. */
+  private sc(): ScenarioDef {
+    return scenarioDef(this.scenario, this.options);
   }
 
   private broadcastLobby(): void {
@@ -230,8 +243,9 @@ export class RoomCore {
 
   /** New players take the first free General slot, so a quick game needs no clicking. */
   private autoClaim(p: Player): void {
-    const sc = scenarioDef(this.scenario);
+    const sc = this.sc();
     for (const side of sc.sides) {
+      if (side.aiOnly) continue;
       for (const slot of side.slots) {
         if (slot.reserve) continue;
         if (!this.players.some((x) => x !== p && x.role === 'general' && x.slot === slot.key)) {
@@ -257,6 +271,7 @@ export class RoomCore {
         const ok = listScenarios().some((s) => s.id === m.id);
         if (!ok) return;
         this.scenario = m.id;
+        this.options = scenarioChoices(m.id);
         this.armies = [];
         for (const x of this.players) {
           x.role = 'spectator';
@@ -275,9 +290,12 @@ export class RoomCore {
         if (!p.host) return;
         this.map = m.map;
         break;
-      case 'gold':
+      case 'options':
+        // New choices can change factions and maps: recruited armies start over.
         if (!p.host) return;
-        this.gold = Math.max(500, Math.min(50000, Math.round(Number(m.gold) || 0)));
+        this.options = scenarioChoices(this.scenario, m.options ?? {});
+        this.armies = [];
+        for (const x of this.players) x.ready = false;
         break;
       case 'claim':
         this.claim(p, m.role, String(m.slot ?? ''), Math.max(0, Math.floor(Number(m.det) || 0)));
@@ -286,9 +304,19 @@ export class RoomCore {
         p.ready = !!m.on;
         break;
       case 'army': {
-        // A player recruited an army for their slot (gold modes).
-        if (p.role !== 'general' || m.army?.slot !== p.slot) return;
-        this.armies = [...this.armies.filter((a) => a.slot !== p.slot), m.army];
+        // A General recruited an army for their slot (gold modes); the relay checks the bill.
+        if (p.role !== 'general') return;
+        const sc = this.sc();
+        const units = Array.isArray(m.units) ? m.units.map(String).slice(0, 40) : [];
+        const others = this.armies.filter((a) => a.slot !== p.slot);
+        if (!units.length) {
+          this.armies = others;
+          break;
+        }
+        const side = slotSide(sc, p.slot);
+        const army = recruitedArmy(sc, p.slot, units);
+        if (!army || !sc.recruit || !validArmy(army.faction, units, budgetFor(sc, side), sc.recruit.maxUnits)) return;
+        this.armies = [...others, army];
         break;
       }
       case 'kick': {
@@ -314,8 +342,8 @@ export class RoomCore {
       p.slot = '';
       return;
     }
-    const sc = scenarioDef(this.scenario);
-    const def = sc.sides.flatMap((s) => s.slots).find((s) => s.key === slot);
+    const sc = this.sc();
+    const def = sc.sides.filter((s) => !s.aiOnly).flatMap((s) => s.slots).find((s) => s.key === slot);
     if (!def) return;
     if (role === 'general') {
       if (this.players.some((x) => x !== p && x.role === 'general' && x.slot === slot)) return;
@@ -334,6 +362,17 @@ export class RoomCore {
     p.ready = false;
   }
 
+  /** Gold a player starts the battle with: what a General didn't spend on the army. */
+  private startGold(p: Player): number | undefined {
+    const sc = this.sc();
+    if (!sc.recruit || p.role !== 'general') return sc.recruit ? 0 : undefined;
+    const side = slotSide(sc, p.slot);
+    const army = this.armies.find((a) => a.slot === p.slot);
+    const def = sc.sides[side]?.slots.find((s) => s.key === p.slot);
+    const units = (army ?? def)?.dets.flatMap((d) => d.units) ?? [];
+    return Math.max(0, budgetFor(sc, side) - armyCost(units));
+  }
+
   // --- Battle -----------------------------------------------------------------------------
 
   private start(): void {
@@ -344,9 +383,9 @@ export class RoomCore {
       scenario: this.scenario,
       settings: this.settings,
       map: this.map ?? undefined,
-      players: this.players.map((p) => ({ id: p.id, name: p.name, role: p.role, slot: p.slot, det: p.det })),
+      players: this.players.map((p) => ({ id: p.id, name: p.name, role: p.role, slot: p.slot, det: p.det, gold: this.startGold(p) })),
       armies: this.armies.length ? this.armies : undefined,
-      gold: scenarioDef(this.scenario).recruit ? this.gold : undefined,
+      options: this.options,
     };
     this.setup = setup;
     this.phase = 'battle';

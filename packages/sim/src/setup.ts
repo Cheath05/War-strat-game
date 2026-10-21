@@ -3,8 +3,9 @@
 
 import { HP_SCALE, WORLD_VERSION, sec } from './constants';
 import { TEAM_COLORS } from './data/colors';
-import { faction, scenarioDef, unitType } from './data/registry';
-import type { ArmySlotDef, DetDef, ZoneDef } from './data/types';
+import { faction, scenarioChoices, scenarioDef, unitType } from './data/registry';
+import type { ArmySlotDef, DetDef, ScenarioDef, ZoneDef } from './data/types';
+import { groupDets } from './economy/armies';
 import { clamp, norm } from './math/det';
 import { seedRng } from './math/rng';
 import { buildMap, passableAt, type BattleMap } from './map/mapgen';
@@ -21,6 +22,8 @@ export interface PlayerSetup {
   slot: string;
   /** Detachment index within the army (commander role); 0 is the first non-guard detachment. */
   det: number;
+  /** Gold to start the battle with (what's left from recruiting); defaults to setup.gold. */
+  gold?: number;
 }
 
 export interface ArmySetup {
@@ -46,6 +49,8 @@ export interface BattleSetup {
   armies?: ArmySetup[];
   /** Starting gold per human player (gold modes). */
   gold?: number;
+  /** Lobby choices for scenarios with options (map, factions...). */
+  options?: Record<string, string>;
 }
 
 export function defaultSettings(): Settings {
@@ -62,7 +67,7 @@ export function emptyDetOrder(): Detachment['order'] {
 
 /** Army setups for every slot of the scenario, with recruited overrides applied. */
 export function resolveArmies(setup: BattleSetup): ArmySetup[] {
-  const sc = scenarioDef(setup.scenario);
+  const sc = scenarioDef(setup.scenario, setup.options);
   const out: ArmySetup[] = [];
   sc.sides.forEach((side, si) => {
     for (const slot of side.slots) {
@@ -72,6 +77,18 @@ export function resolveArmies(setup: BattleSetup): ArmySetup[] {
     }
   });
   return out;
+}
+
+/** The army a player recruited for a slot: the slot's general, zone and orders, with these units. */
+export function recruitedArmy(sc: ScenarioDef, slot: string, units: string[]): ArmySetup | null {
+  const side = slotSide(sc, slot);
+  const def = sc.sides[side]?.slots.find((s) => s.key === slot);
+  return def ? { ...fromSlot(def, side), dets: groupDets(units) } : null;
+}
+
+/** Index of the side a slot belongs to, or -1. */
+export function slotSide(sc: ScenarioDef, slot: string): number {
+  return sc.sides.findIndex((s) => s.slots.some((sl) => sl.key === slot));
 }
 
 export function fromSlot(slot: ArmySlotDef, side: number): ArmySetup {
@@ -90,7 +107,7 @@ export function fromSlot(slot: ArmySlotDef, side: number): ArmySetup {
 }
 
 export function createWorld(setup: BattleSetup): World {
-  const sc = scenarioDef(setup.scenario);
+  const sc = scenarioDef(setup.scenario, setup.options);
   const mapRef: MapRef = setup.map ?? { id: sc.map.id, seed: sc.map.seed ?? (setup.seed & 0xffff), params: sc.map.params ?? {} };
   const map = buildMap(mapRef);
   const humans = setup.players.filter((p) => p.role !== 'spectator');
@@ -104,7 +121,7 @@ export function createWorld(setup: BattleSetup): World {
     seed: setup.seed,
     settings: { ...setup.settings },
     map: mapRef,
-    scenario: { id: sc.id, t: 0, fired: [], vars: {}, wave: 0, nextWave: 0 },
+    scenario: { id: sc.id, opts: scenarioChoices(sc.id, setup.options), t: 0, fired: [], vars: {}, wave: 0, nextWave: 0 },
     sides: sc.sides.map((s, i) => ({ id: i, name: s.name, faction: s.faction, score: 0, out: false })),
     armies: [],
     dets: [],
@@ -136,6 +153,8 @@ export function createWorld(setup: BattleSetup): World {
       id: ps.id,
       name: ps.name,
       role: ps.role,
+      slot: ps.slot,
+      detIndex: ps.det,
       army: army?.id ?? 0,
       det: 0,
       on: true,
@@ -145,23 +164,64 @@ export function createWorld(setup: BattleSetup): World {
       run: false,
       aimX: 0,
       aimY: 0,
-      gold: setup.gold ?? 0,
+      gold: ps.gold ?? setup.gold ?? 0,
       kills: 0,
       led: 0,
       ready: false,
     };
-    if (army && ps.role === 'general') army.ctrl = ps.id;
-    if (army && ps.role === 'commander') {
-      const field = army.dets.map((id) => w.dets.find((d) => d.id === id)!).filter((d) => !d.guard);
-      const d = field[clamp(ps.det, 0, field.length - 1)];
-      if (d) {
-        d.ctrl = ps.id;
-        p.det = d.id;
-      }
-    }
+    if (army) bindPlayer(w, p, army);
     w.players.push(p);
   }
+
+  // Capture points.
+  for (const o of sc.objectives ?? []) {
+    const at = map.points[o.at];
+    if (at) w.objectives.push({ id: w.nextId++, key: o.at, name: o.name, kind: 'point', x: at.x, y: at.y, r: o.r, owner: -1, prog: 0 });
+  }
+  // A side with armies still to come can't be beaten yet (scripts update this).
+  sc.sides.forEach((s, i) => {
+    if (s.slots.some((sl) => sl.reserve) || (sc.waves && i === 1)) w.scenario.vars[`pending${i}`] = 1;
+  });
   return w;
+}
+
+/** Gives a player their army (general) or detachment (commander). */
+export function bindPlayer(w: World, p: PlayerState, army: Army): void {
+  p.army = army.id;
+  if (p.role === 'general') army.ctrl = p.id;
+  if (p.role === 'commander') {
+    const field = army.dets.map((id) => w.dets.find((d) => d.id === id)!).filter((d) => !d.guard);
+    const d = field[clamp(p.detIndex, 0, field.length - 1)];
+    if (d) {
+      d.ctrl = p.id;
+      p.det = d.id;
+    }
+  }
+}
+
+/** Brings a scenario's reserve army onto the field (a later wave, a flank march). */
+export function spawnReserve(w: World, map: BattleMap, key: string): Army | null {
+  if (w.armies.some((a) => a.slot === key)) return null;
+  const sc = scenarioDef(w.scenario.id, w.scenario.opts);
+  for (let side = 0; side < sc.sides.length; side++) {
+    const def = sc.sides[side]!.slots.find((s) => s.key === key);
+    if (def) return spawnLate(w, map, fromSlot(def, side));
+  }
+  return null;
+}
+
+/**
+ * Brings an army onto the field mid-battle in its deployment zone; players who claimed its
+ * slot take command. Several armies may share a colour (waves), so a taken `pal` is kept.
+ */
+export function spawnLate(w: World, map: BattleMap, setup: ArmySetup): Army | null {
+  const zone = map.zones[setup.deploy];
+  if (!zone) return null;
+  const used = new Set(w.armies.map((a) => a.pal));
+  const pal = setup.pal ?? pickColor(setup, used);
+  const army = spawnArmy(w, map, setup, zone, pal, 0);
+  for (const p of w.players) if (p.slot === setup.slot && p.role !== 'spectator') bindPlayer(w, p, army);
+  return army;
 }
 
 function pickColor(a: ArmySetup, used: Set<number>): number {
@@ -201,16 +261,27 @@ export function edgePoint(map: BattleMap, cx: number, cy: number, fx: number, fy
   return [bx, by];
 }
 
-/** Part k of n of a zone, split along its width (perpendicular to its facing). */
+/**
+ * Part k of n of a zone. A wide zone is split side by side (across its facing); a narrow
+ * one (a pass) front to back, the first army in front.
+ */
 function subZone(z: ZoneDef, k: number, n: number): ZoneDef {
   if (n <= 1) return z;
-  const alongX = Math.abs(z.dy) >= Math.abs(z.dx);
-  if (alongX) {
-    const step = (z.x1 - z.x0) / n;
-    return { ...z, x0: z.x0 + step * k, x1: z.x0 + step * (k + 1) };
+  const facesY = Math.abs(z.dy) >= Math.abs(z.dx);
+  const wide = facesY ? z.x1 - z.x0 : z.y1 - z.y0;
+  const deep = facesY ? z.y1 - z.y0 : z.x1 - z.x0;
+  if (wide >= deep) {
+    if (facesY) {
+      const step = (z.x1 - z.x0) / n;
+      return { ...z, x0: z.x0 + step * k, x1: z.x0 + step * (k + 1) };
+    }
+    const step = (z.y1 - z.y0) / n;
+    return { ...z, y0: z.y0 + step * k, y1: z.y0 + step * (k + 1) };
   }
-  const step = (z.y1 - z.y0) / n;
-  return { ...z, y0: z.y0 + step * k, y1: z.y0 + step * (k + 1) };
+  const step = deep / n;
+  const idx = (facesY ? z.dy : z.dx) > 0 ? n - 1 - k : k;
+  if (facesY) return { ...z, y0: z.y0 + step * idx, y1: z.y0 + step * (idx + 1) };
+  return { ...z, x0: z.x0 + step * idx, x1: z.x0 + step * (idx + 1) };
 }
 
 interface PlacedUnit {
@@ -249,6 +320,7 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
     ai: { plan: '', stage: 0, roles: {}, since: 0 },
     directive: a.ai,
     zone: [zone.x0, zone.y0, zone.x1, zone.y1],
+    face: [fx, fy],
     edgeX: ex,
     edgeY: ey,
     shock: 0,
@@ -333,7 +405,7 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
     const ly = clamp(cy + ry * pu.lateral + fy * pu.forward, zone.y0, zone.y1);
     const det = w.dets.find((d) => d.id === pu.det)!;
     const isGen = pu.det === guardDet.id;
-    const u = spawnUnit(w, army, det, pu.type, lx, ly, fx, fy, sizeOf(pu.type));
+    const u = spawnUnit(w, army, det, pu.type, lx, ly, fx, fy, sizeOf(pu.type), map);
     if (isGen) {
       army.genUnit = u.id;
       army.genSoldier = u.cap;
@@ -362,9 +434,45 @@ function isScreen(type: string): boolean {
   return !t.mounted && (t.cls === 'skirm' || t.cls === 'archer' || t.cls === 'slinger');
 }
 
+/** Nearest point a soldier of this movement class can stand on (tile centre), or the point itself. */
+export function nearestStandable(map: BattleMap, x: number, y: number, mask: number): [number, number] {
+  if (passableAt(map, x, y, mask)) return [x, y];
+  for (let r = 2; r <= 80; r += 2) {
+    for (let k = 0; k < 16; k++) {
+      // Directions from a fixed table (no trigonometry in the sim).
+      const [dx, dy] = RING[k]!;
+      const px = x + dx * r;
+      const py = y + dy * r;
+      if (passableAt(map, px, py, mask)) return [px, py];
+    }
+  }
+  return [x, y];
+}
+
+const RING: [number, number][] = [
+  [1, 0],
+  [0.92388, 0.38268],
+  [0.70711, 0.70711],
+  [0.38268, 0.92388],
+  [0, 1],
+  [-0.38268, 0.92388],
+  [-0.70711, 0.70711],
+  [-0.92388, 0.38268],
+  [-1, 0],
+  [-0.92388, -0.38268],
+  [-0.70711, -0.70711],
+  [-0.38268, -0.92388],
+  [0, -1],
+  [0.38268, -0.92388],
+  [0.70711, -0.70711],
+  [0.92388, -0.38268],
+];
+
 /** Creates a unit in formation with its anchor at (x, y) facing (fx, fy). */
-export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x: number, y: number, fx: number, fy: number, n: number): Unit {
+export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x: number, y: number, fx: number, fy: number, n: number, map?: BattleMap): Unit {
   const t = unitType(type);
+  const mask = t.cls === 'ele' || t.cls === 'chariot' ? MOVE.large : t.mounted ? MOVE.horse : MOVE.foot;
+  if (map) [x, y] = nearestStandable(map, x, y, mask);
   const form = t.forms[0]!;
   const u: Unit = {
     id: w.nextId++,
@@ -389,7 +497,8 @@ export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x
     morale: t.morale,
     fat: 0,
     ammo: t.missile ? t.missile.ammo : 0,
-    flags: t.missile && !(t.cls === 'inf') ? 1 : 0,
+    // Missile troops fire at will; light skirmishers and horse archers also keep away from melee.
+    flags: (t.missile && t.cls !== 'inf' ? 1 : 0) | (t.cls === 'skirm' || t.cls === 'hacav' || t.cls === 'slinger' ? 2 : 0),
     routs: 0,
     recentLoss: 0,
     losses: 0,
@@ -418,12 +527,18 @@ export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x
   // Officer first, then the ranks.
   const hp = t.hp * HP_SCALE;
   // Officers are a little tougher than their men.
-  const officer: Soldier = makeSoldier(w, u, hp * 1.5, x + fx * 1.2, y + fy * 1.2, fx, fy, 0, RANK.captain);
+  let [ox, oy] = [x + fx * 1.2, y + fy * 1.2];
+  if (map && !passableAt(map, ox, oy, mask)) [ox, oy] = [x, y];
+  const officer: Soldier = makeSoldier(w, u, hp * 1.5, ox, oy, fx, fy, 0, RANK.captain);
   u.cap = officer.id;
   u.sol.push(officer.id);
   for (let k = 0; k < nSlots; k++) {
     const [lat, back] = slotOffset(u, t, k, nSlots, u.width);
-    const s = makeSoldier(w, u, hp, x + rx * lat - fx * back, y + ry * lat - fy * back, fx, fy, k, RANK.soldier);
+    let sx = x + rx * lat - fx * back;
+    let sy = y + ry * lat - fy * back;
+    // In tight ground, men who'd stand inside a cliff or the sea squeeze in near the anchor.
+    if (map && !passableAt(map, sx, sy, mask)) [sx, sy] = nearestStandable(map, x + ((k % 5) - 2) * 0.6, y - Math.floor(k / 5) * 0.6, mask);
+    const s = makeSoldier(w, u, hp, sx, sy, fx, fy, k, RANK.soldier);
     u.sol.push(s.id);
   }
   w.units.push(u);

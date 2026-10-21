@@ -32,6 +32,10 @@ export const PLAINS: MapScript = {
     p.scatter('reeds', 0.25, [T.shallow]);
     p.zone('south', 40, p.hm - 75, p.wm - 40, p.hm - 15, 0, -1);
     p.zone('north', 40, 15, p.wm - 40, 75, 0, 1);
+    // Objectives: the west hill, the crossroads, the east hill.
+    p.point('cp1', p.wm * 0.3, p.hm * 0.52);
+    p.point('cp2', p.wm * 0.44, p.hm * 0.5);
+    p.point('cp3', p.wm * 0.78, p.hm * 0.42);
     p.sea = -0.25;
   },
 };

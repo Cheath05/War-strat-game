@@ -43,50 +43,68 @@ export function drawHorseman(px: Px, spec: SpriteSpec, view: View, pose: Pose): 
     return;
   }
   if (view === 2) {
-    // Profile, facing right.
+    // Profile, facing right: a long body, a neck reaching up and forward, a long head.
     const y = 26 + bob;
-    // Legs (four, two pairs swinging).
-    px.rect(15 + ba, y + 6, 2, 10, dark(c));
-    px.rect(18 - ba, y + 6, 2, 10, body);
-    px.rect(28 + fa, y + 6, 2, 10, dark(c));
-    px.rect(31 - fa, y + 6, 2, 10, body);
-    for (const x of [15 + ba, 18 - ba, 28 + fa, 31 - fa]) px.rect(x, y + 16, 2, 1, P.outline, true);
-    // Body, neck, head, tail.
-    px.ellipse(24, y + 3, 11, 5, body);
-    px.rect(31, y - 8, 5, 9, body);
-    px.ellipse(36, y - 9, 4.5, 3, body);
-    px.rect(38, y - 8, 3, 3, body);
-    px.set(37, y - 10, P.eye, true);
-    px.rect(32, y - 10, 2, 9, mane);
-    px.rect(11, y, 2, 7, mane);
-    px.set(10, y + 6, mane);
+    // Legs (two pairs swinging) and hooves.
+    px.rect(14 + ba, y + 6, 2, 9, dark(c));
+    px.rect(17 - ba, y + 6, 2, 9, body);
+    px.rect(28 + fa, y + 6, 2, 9, dark(c));
+    px.rect(31 - fa, y + 6, 2, 9, body);
+    for (const x of [14 + ba, 17 - ba, 28 + fa, 31 - fa]) px.rect(x, y + 15, 2, 1, P.outline, true);
+    // Body and deep chest.
+    px.ellipse(23, y + 2, 11, 5, body);
+    px.ellipse(31, y + 1, 4, 5, body);
+    // Neck, head and muzzle.
+    for (let i = 0; i < 7; i++) px.rect(31 + (i >> 1), y - 1 - i, 5, 2, body);
+    px.ellipse(38, y - 8, 3.5, 2.5, body);
+    px.rect(39, y - 8, 4, 3, body);
+    px.rect(41, y - 6, 2, 1, light(c));
+    px.set(37, y - 9, P.eye, true);
+    px.rect(35, y - 11, 1, 2, body);
+    px.rect(37, y - 11, 1, 2, body);
+    // Mane along the neck, tail behind.
+    for (let i = 0; i < 7; i++) px.set(31 + (i >> 1), y - 2 - i, mane);
+    px.rect(11, y - 1, 2, 3, mane);
+    px.rect(10, y + 2, 2, 7, mane);
     // Saddle cloth in team colours.
-    px.rect(18, y - 2, 9, 5, mid(R.team));
-    px.hline(18, 26, y + 3, mid(R.team2), true);
-    drawSoldier(px, spec, 2, pose, 22, y + 8, true);
+    px.rect(18, y - 3, 9, 5, mid(R.team));
+    px.hline(18, 26, y + 2, mid(R.team2), true);
+    drawSoldier(px, spec, 2, pose, 22, y + 7, true);
     return;
   }
-  // Front (toward the camera) and back views: narrow, legs in pairs.
+  // Front (toward the camera) and back views. The rider sits high with his legs down the
+  // horse's flanks, and the horse's head and neck (front) or rump and tail (back) come in
+  // front of him, so a horseman never reads as a man on foot.
   const y = 26 + bob;
   const front = view === 0;
-  px.rect(19 + fa, y + 5, 2, 11, body);
-  px.rect(27 - fa, y + 5, 2, 11, body);
-  px.rect(20 + ba, y + 4, 2, 10, dark(c));
-  px.rect(26 - ba, y + 4, 2, 10, dark(c));
-  px.ellipse(24, y + 2, 6, 5, body);
-  if (front) {
-    // Head and neck come toward us, below the rider.
-    px.rect(21, y - 4, 6, 8, body);
-    px.ellipse(24, y + 4, 3, 4, light(c));
-    px.set(22, y + 1, P.eye, true);
-    px.set(26, y + 1, P.eye, true);
-    px.rect(21, y - 6, 2, 3, mane);
-    px.rect(25, y - 6, 2, 3, mane);
-  } else {
-    px.rect(23, y + 3, 2, 8, mane);
-  }
-  px.rect(17, y - 2, 14, 4, mid(R.team));
+  // Far legs, then near legs.
+  px.rect(19 - ba, y + 6, 2, 11, dark(c));
+  px.rect(27 + ba, y + 6, 2, 11, dark(c));
+  px.rect(18 + fa, y + 7, 2, 12, body);
+  px.rect(28 - fa, y + 7, 2, 12, body);
+  for (const x of [18 + fa, 28 - fa]) px.rect(x, y + 19, 2, 1, P.outline, true);
+  // Barrel and saddle cloth, wider than the rider.
+  px.ellipse(24, y + 3, 8, 6, body);
+  px.rect(15, y - 1, 18, 4, mid(R.team));
+  px.hline(15, 32, y + 3, mid(R.team2), true);
   drawSoldier(px, spec, view, pose, 24, y + 8, true);
+  // The rider's legs down the flanks.
+  px.rect(15, y, 2, 6, mid(R.leather));
+  px.rect(31, y, 2, 6, mid(R.leather));
+  if (front) {
+    px.rect(21, y - 3, 6, 8, body);
+    px.ellipse(24, y + 7, 3.5, 4.5, body);
+    px.ellipse(24, y + 10, 2.5, 2, light(c));
+    px.set(22, y + 5, P.eye, true);
+    px.set(26, y + 5, P.eye, true);
+    px.rect(21, y - 5, 2, 3, mane);
+    px.rect(25, y - 5, 2, 3, mane);
+    px.rect(23, y - 3, 2, 6, mane);
+  } else {
+    px.ellipse(24, y + 4, 7, 5, body);
+    px.rect(23, y + 3, 2, 10, mane);
+    px.set(24, y + 13, mane);
+  }
 }
 
 export function drawElephant(px: Px, spec: SpriteSpec, view: View, pose: Pose): void {
@@ -164,17 +182,35 @@ export function drawChariot(px: Px, spec: SpriteSpec, view: View, pose: Pose): v
     drawSoldier(px, spec, 2, pose, 22, y + 8, true);
     return;
   }
+  // From behind, the team pulls away beyond the car: rumps and tails above its rim.
+  if (view === 1) {
+    for (const hx of [24, 40]) {
+      px.rect(hx - 3, y + 2, 2, 6, dark(R.horse));
+      px.rect(hx + 1, y + 2, 2, 6, dark(R.horse));
+      px.ellipse(hx, y + 1, 5, 4, mid(R.horse));
+      px.rect(hx - 1, y, 2, 6, dark(R.horse));
+    }
+  }
   px.rect(18, y + 4, 28, 8, mid(R.wood));
   px.rect(18, y + 4, 28, 2, mid(R.team));
   px.ellipse(16, y + 12, 3, 6, dark(R.wood));
   px.ellipse(48, y + 12, 3, 6, dark(R.wood));
   px.line(13, y + 13, 6, y + 13, mid(R.iron));
   px.line(51, y + 13, 58, y + 13, mid(R.iron));
+  drawSoldier(px, spec, view, pose, 32, y + 10, true);
+  // From the front, the team comes toward us ahead of the car: heads, chests and legs.
   if (view === 0) {
     for (const hx of [26, 38]) {
-      px.rect(hx - 3, y + 10, 6, 12, mid(R.horse));
-      px.ellipse(hx, y + 14, 3, 4, light(R.horse));
+      px.rect(hx - 3 + fa, y + 15, 2, 7, dark(R.horse));
+      px.rect(hx + 1 - fa, y + 15, 2, 7, dark(R.horse));
+      px.ellipse(hx, y + 14, 4.5, 3, mid(R.horse));
+      px.rect(hx - 2, y + 6, 4, 7, mid(R.horse));
+      px.ellipse(hx, y + 11, 2.5, 3.5, mid(R.horse));
+      px.ellipse(hx, y + 14, 2, 1.5, light(R.horse));
+      px.set(hx - 1, y + 9, P.eye, true);
+      px.set(hx + 1, y + 9, P.eye, true);
+      px.rect(hx - 2, y + 4, 1, 2, dark(R.horse));
+      px.rect(hx + 1, y + 4, 1, 2, dark(R.horse));
     }
   }
-  drawSoldier(px, spec, view, pose, 32, y + 10, true);
 }

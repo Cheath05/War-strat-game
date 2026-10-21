@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { ORDER_NAMES, TEAM_COLORS, type DetOrder, type FormationKind } from '@pl/sim';
+import { ORDER_NAMES, TEAM_COLORS, recruitable, type DetOrder, type FormationKind } from '@pl/sim';
 import { useStore } from '../app/store';
 import type { GameSession } from '../game/session';
 import type { DetCard, UnitCard } from '../game/hud';
@@ -51,6 +51,7 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
               <i style={{ width: `${(100 * s.alive) / Math.max(1, s.start)}%`, background: s.color }} />
             </div>
             <span className="dim">{s.alive}</span>
+            {h.notes[i] && <span style={{ color: 'var(--gold)', fontSize: 13 }}>{h.notes[i]}</span>}
           </div>
         ))}
         <div className="hud-clock" style={{ order: 1 }}>
@@ -83,6 +84,11 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
           <button className={`ff-btn ${h.ready ? 'on' : ''}`} onClick={() => session.issue({ k: 'ready', on: !h.ready })}>
             {h.ready ? 'Waiting…' : 'Ready for battle'}
           </button>
+        </div>
+      )}
+      {h.waiting && h.phase !== 'ended' && (
+        <div className="ff-window" style={{ position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', fontSize: 14 }}>
+          {h.waiting}
         </div>
       )}
       {h.myOrder && h.phase === 'battle' && (
@@ -127,6 +133,7 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
           </div>
         </div>
       )}
+      {h.goldMode && h.phase === 'battle' && <GoldBox session={session} />}
       <Minimap session={session} />
       {typing && chat && (
         <div className="ff-window pl-hud-block" style={{ position: 'absolute', left: 220, bottom: 150, width: 420, padding: 6 }}>
@@ -256,9 +263,48 @@ function Card({ u, session, color }: { u: UnitCard; session: GameSession; color:
   );
 }
 
+/** Gold and reinforcements (gold modes): new units march in from our map edge. */
+function GoldBox({ session }: { session: GameSession }) {
+  const h = useStore(session.hud, (s) => s);
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="ff-window gold-box pl-hud-block">
+      <div className="row" style={{ gap: 8 }}>
+        <span>
+          Gold <b style={{ color: 'var(--gold)' }}>{h.gold}</b>
+        </span>
+        <button className={`ff-btn small ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}>
+          Reinforce
+        </button>
+      </div>
+      {open && (
+        <div className="col" style={{ gap: 3, marginTop: 6 }}>
+          <span className="dim" style={{ fontSize: 12 }}>
+            {h.armyFull ? 'Your army is at full strength in units.' : 'New units march in from your map edge.'}
+          </span>
+          {recruitable(h.faction).map((t) => (
+            <button key={t.id} className="ff-btn small recruit-row" disabled={h.armyFull || t.cost > h.gold} title={t.desc} onClick={() => session.issue({ k: 'recruit', t: t.id })}>
+              <UnitIcon type={t.id} pal={h.pal} />
+              <span style={{ flex: 1, textAlign: 'left' }}>{t.name}</span>
+              <span style={{ color: 'var(--gold)' }}>{t.cost}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OrdersPanel({ session, units }: { session: GameSession; units: UnitCard[] }) {
+  const h = useStore(session.hud, (s) => s);
   const first = units[0]!;
   const ids = units.map((u) => u.id);
+  // Refilling worn units (gold modes): price per man, a quarter above the unit's own.
+  const worn = units.filter((u) => u.n < u.max);
+  const refill = worn.reduce((s, u) => {
+    const t = session.battle.typeOf(session.battle.unit(u.id)!);
+    return s + (u.max - u.n) * Math.ceil((t.cost / Math.max(1, t.size)) * 1.25);
+  }, 0);
   const real = (): import('@pl/sim').Unit[] => ids.map((id) => session.battle.unit(id)!).filter(Boolean);
   const forms = first.forms;
   return (
@@ -305,6 +351,15 @@ function OrdersPanel({ session, units }: { session: GameSession; units: UnitCard
             {!a.ready ? ` ${a.cd}s` : ''}
           </button>
         ))}
+        {h.goldMode && worn.length > 0 && (
+          <button
+            className="ff-btn small"
+            title="Fresh men for worn units out of combat, near your General or your map edge. Buys as many as your gold allows."
+            onClick={() => worn.forEach((u) => session.issue({ k: 'replenish', u: u.id }))}
+          >
+            Replenish ({refill} gold)
+          </button>
+        )}
       </div>
     </div>
   );
@@ -326,6 +381,16 @@ function Result({ session, exit, resultExit }: { session: GameSession; exit: () 
           {r.winner < 0 ? 'Draw' : r.mine ? 'Victory!' : 'Defeat'}
         </div>
         <div className="dim">{r.reason}</div>
+        {b.scenario.waves && (
+          <div style={{ margin: '6px 0', fontSize: 18 }}>
+            Waves beaten: <b style={{ color: 'var(--gold)' }}>{b.world.sides[0]!.score}</b> of {b.scenario.waves.count}
+          </div>
+        )}
+        {h.notes.some(Boolean) && !b.scenario.waves && (
+          <div style={{ margin: '6px 0' }}>
+            Victory points: {b.world.sides.map((s) => `${s.name} ${s.score}`).join(' · ')}
+          </div>
+        )}
         <div className="stats">
           <b>Army</b>
           <b>Kills</b>

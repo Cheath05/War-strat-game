@@ -11,6 +11,7 @@ import { heightAt } from '../map/mapgen';
 import type { Soldier, Unit } from '../types';
 import { ACT } from '../types';
 import { FORM } from '../units/formation';
+import { bounty } from '../economy/gold';
 
 /** Ticks of charge bonus after impact. */
 export const CHARGE_BONUS_TICKS = sec(2);
@@ -21,10 +22,24 @@ export function fatiguePenalty(b: Battle, u: Unit): number {
   return u.fat > 85 ? 12 : u.fat > 65 ? 7 : u.fat > 45 ? 3 : 0;
 }
 
-/** Difficulty edge for AI-led armies: Easy -6, Normal 0, Hard +4, Legendary +8. */
+/**
+ * Difficulty edge for AI-led armies facing the players: Easy -6, Normal 0, Hard +4,
+ * Legendary +8. AI allies on a players' side get none (and with nobody playing, as in
+ * the headless runner, side 0 counts as the players').
+ */
 export function aiEdge(b: Battle, u: Unit): number {
   const a = b.army(u.army);
   if (!a || (a.ctrl && b.player(a.ctrl)?.on)) return 0;
+  let humans = 0;
+  let mine = false;
+  for (const p of b.world.players) {
+    if (!p.on || p.role === 'spectator') continue;
+    const pa = b.army(p.army);
+    if (!pa) continue;
+    humans++;
+    if (pa.side === a.side) mine = true;
+  }
+  if (mine || (humans === 0 && a.side === 0)) return 0;
   return [-6, 0, 4, 8][b.world.settings.difficulty] ?? 0;
 }
 
@@ -99,5 +114,6 @@ export function kill(b: Battle, e: Soldier, eu: Unit, byU: Unit | null): void {
     const p = b.player(pid);
     if (p) p.kills++;
   }
+  if (byU) bounty(b, byU.id, eu.type);
   b.emit({ k: 'death', s: e.id, u: eu.id, army: eu.army, type: eu.type, x: e.x, y: e.y, fx: e.fx, fy: e.fy, rank: e.rank });
 }

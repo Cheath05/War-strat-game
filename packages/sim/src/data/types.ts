@@ -158,13 +158,24 @@ export interface ScenarioSideDef {
   faction: string;
   role: 'attacker' | 'defender' | 'neutral';
   slots: ArmySlotDef[];
+  /** Only the AI plays this side (Last Stand's waves). */
+  aiOnly?: boolean;
+}
+
+/** A lobby choice that changes the battle (map, factions...). The first choice is the default. */
+export interface ScenarioOption {
+  id: string;
+  name: string;
+  choices: { id: string; name: string }[];
 }
 
 export type VictoryRule =
   | { k: 'rout' }
   | { k: 'timer'; winner: number; seconds: number }
   | { k: 'zone'; zone: string; side: number; count: number }
-  | { k: 'points'; target: number };
+  | { k: 'points'; target: number }
+  /** At the deadline, the side with more victory points wins. */
+  | { k: 'deadline'; seconds: number };
 
 export interface ScenarioDef {
   id: string;
@@ -180,8 +191,19 @@ export interface ScenarioDef {
   victory: VictoryRule[];
   /** Seconds of deployment phase. */
   deploySeconds?: number;
-  /** Players recruit their own armies with gold (Last Stand, Objective battles). */
-  recruit?: { gold: number; maxUnits: number };
+  /**
+   * Gold: players recruit their own armies before the battle (gold > 0) and/or buy
+   * reinforcements during it. `sides` limits it to some sides (default all); `income` is
+   * gold per minute per human player.
+   */
+  recruit?: { gold: number; maxUnits: number; sides?: number[]; income?: number; goldBySide?: number[] };
+  /** Lobby choices; `configure` builds the battle from the chosen ones. */
+  options?: ScenarioOption[];
+  configure?: (choices: Record<string, string>) => ScenarioDef;
+  /** Capture points at named map points. */
+  objectives?: { at: string; name: string; r: number }[];
+  /** Scripted enemy waves (Last Stand): where they come from and how many. */
+  waves?: { zones: string[]; count: number };
 }
 
 export interface ZoneDef {

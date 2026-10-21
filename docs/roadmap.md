@@ -19,10 +19,10 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
   - resync, reconnect and pause;
   - the Node host, bots and the integration test.
 - [x] **M4 Roles:** detachment orders and markers, human Commanders, pings, possession with prediction.
-- [ ] **M5 Content:**
-  - Carthage, Persia and Macedon;
-  - Thermopylae, Last Stand, Capture & Hold and Defend the Bridge;
-  - the gold economy and fog of war.
+- [x] **M5 Content:**
+  - Carthage, Persia and Macedon, with elephants, scythed chariots and horse archers;
+  - Thermopylae, Last Stand, Capture & Hold and Defend the Bridge, with lobby choices for maps and factions;
+  - the gold economy (recruiting, reinforcements, refills) and fog of war.
 - [ ] **M6 Launch:**
   - sound and music, the intro fly-over, settings and How to Play;
   - the performance pass;
@@ -40,10 +40,13 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
 
 ## Known polish items
 
-- Horses read a little like camels: the neck is too upright.
 - Close zoom drops to about 40 fps on this Mac, from overdraw of large alpha-tested sprites.
   - Options: sort front to back, or lower the render scale when zoomed in.
 - The map edge past the playable area can look dark at some angles.
+- The hill fort's ring wall is only 2.8 m tall, so from high above it reads more like a path than a wall.
+- The general of a beaten wave rides off to a map corner and waits there.
+- Recruiting can't move units between detachments yet; they group automatically.
+- The art preview (`#art`) only opens on a fresh page load.
 
 ## Ideas from game nights
 

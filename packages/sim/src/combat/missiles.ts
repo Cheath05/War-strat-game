@@ -22,10 +22,16 @@ export function projKind(m: MissileDef): number {
   return PROJ_KIND[m.kind];
 }
 
-/** Is this a dedicated missile unit (as opposed to infantry with one pilum volley)? */
+/**
+ * Is this a dedicated missile unit that keeps its distance? Infantry with pila, shock
+ * cavalry carrying a few javelins and elephants are melee units that throw on the approach.
+ */
 export function isRanged(u: Unit, b: Battle): boolean {
   const t = b.typeOf(u);
-  return !!t.missile && t.missile.kind !== 'pilum' && t.cls !== 'inf';
+  const m = t.missile;
+  if (!m || m.kind === 'pilum' || t.cls === 'inf' || t.cls === 'ele') return false;
+  if (t.mounted && t.cls !== 'hacav' && m.ammo <= 4) return false;
+  return true;
 }
 
 function hasAmmo(b: Battle, u: Unit): boolean {
@@ -64,7 +70,7 @@ export function updateMissiles(b: Battle): void {
     }
     if (!hasAmmo(b, u)) continue;
     if (u.engaged > Math.max(2, u.sol.length * 0.3)) continue;
-    const pilum = m.kind === 'pilum' || t.cls === 'inf';
+    const pilum = !isRanged(u, b);
     if (pilum) {
       // One volley right before contact: at the unit we're advancing on, or at whoever is
       // closing on us.

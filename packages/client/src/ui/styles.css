@@ -650,3 +650,80 @@ button {
   color: var(--gold);
   margin: 12px 0 4px;
 }
+
+/* Small label, e.g. "arrives mid-battle" on a reserve army. */
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--gold);
+  border-radius: 3px;
+  color: var(--gold);
+  font-size: 11px;
+  vertical-align: middle;
+}
+
+/* Recruiting an army (gold modes). */
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 8, 24, 0.6);
+}
+.recruit {
+  width: min(96vw, 900px);
+  max-height: 90vh;
+  overflow: auto;
+}
+.recruit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.recruit-card {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+}
+.recruit-card canvas,
+.army-chip canvas {
+  image-rendering: pixelated;
+  width: 32px;
+  height: 32px;
+}
+.army-chip canvas {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+}
+.recruit-card.off {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Gold and reinforcements during battle (gold modes). */
+.gold-box {
+  position: absolute;
+  top: 48px;
+  left: 8px;
+  padding: 6px 10px;
+  max-height: 60vh;
+  overflow: auto;
+  font-size: 14px;
+}
+.recruit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 220px;
+}
+.recruit-row canvas {
+  image-rendering: pixelated;
+  width: 22px;
+  height: 22px;
+}

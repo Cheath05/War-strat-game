@@ -1,5 +1,5 @@
 // Headless AI-vs-AI battle runner and benchmark.
-//   npm run battle -- field --seed 3 --size 1 --minutes 30 [--quiet]
+//   npm run battle -- field --seed 3 --size 1 --minutes 30 [--difficulty 0-3] [--log] [--quiet]
 
 import { Battle, TICK_HZ, defaultSettings, unitType } from '@pl/sim';
 
@@ -13,16 +13,18 @@ const seed = Number(opt('seed', '1'));
 const minutes = Number(opt('minutes', '30'));
 const unitSize = Number(opt('size', '1'));
 const quiet = args.includes('--quiet');
+const log = args.includes('--log');
+const difficulty = Number(opt('difficulty', '1'));
 
 const mapId = opt('map', '');
-const b = Battle.create({ seed, scenario, settings: { ...defaultSettings(), unitSize }, players: [], map: mapId ? { id: mapId, seed, params: {} } : undefined });
+const b = Battle.create({ seed, scenario, settings: { ...defaultSettings(), unitSize, difficulty }, players: [], map: mapId ? { id: mapId, seed, params: {} } : undefined });
 const w = b.world;
 // --attack N: side N assaults, the other defends.
 const attacker = opt('attack', '');
 if (attacker !== '') for (const a of w.armies) a.directive = String(a.side) === attacker ? 'assault' : 'defend';
 const startSoldiers = [0, 0];
 for (const s of w.soldiers) startSoldiers[b.unit(s.u)!.side]!++;
-console.log(`${b.scenario.name} on ${b.map.name} (${b.map.wm}x${b.map.hm} m), seed ${seed}, unit size ${unitSize}`);
+console.log(`${b.scenario.name} on ${b.map.name} (${b.map.wm}x${b.map.hm} m), seed ${seed}, unit size ${unitSize}, difficulty ${difficulty}`);
 console.log(`Soldiers: ${w.sides[0]!.name} ${startSoldiers[0]}, ${w.sides[1]!.name} ${startSoldiers[1]}; units ${w.units.length}`);
 
 const times: number[] = [];
@@ -32,6 +34,7 @@ while (!w.result && w.tick < maxTicks) {
   const s = performance.now();
   b.step([]);
   times.push(performance.now() - s);
+  if (log) for (const e of b.events) if (e.k === 'msg' && e.side !== 1) console.log(`  [${(w.tick / TICK_HZ / 60).toFixed(1)} min] ${e.text}`);
   if (!quiet && w.tick % (60 * TICK_HZ) === 0) {
     const alive = [0, 0];
     const routing = [0, 0];
@@ -50,6 +53,7 @@ const p99 = times[Math.floor(times.length * 0.99)] ?? 0;
 const max = times[times.length - 1] ?? 0;
 const r = w.result;
 console.log(r ? `Result: side ${r.winner} ${r.winner >= 0 ? w.sides[r.winner]!.name : 'draw'} (${r.reason}) after ${(r.tick / TICK_HZ / 60).toFixed(1)} min` : `No result after ${minutes} min`);
+if (w.sides.some((s) => s.score)) console.log(`  Score: ${w.sides.map((s) => `${s.name} ${s.score}`).join(', ')}${w.scenario.wave ? `; waves sent ${w.scenario.wave}` : ''}`);
 for (const a of w.armies) console.log(`  ${a.name.padEnd(12)} ${a.title.padEnd(20)} kills ${String(a.kills).padStart(4)}  losses ${String(a.losses).padStart(4)}${a.genDead ? '  (general fell)' : ''}`);
 const best = [...w.units].sort((x, y) => y.kills - x.kills)[0];
 if (best) console.log(`  Best unit: ${unitType(best.type).name} (${b.army(best.army)!.title}), ${best.kills} kills`);

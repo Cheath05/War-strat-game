@@ -80,6 +80,16 @@ export interface HudState {
   orderMode: string;
   /** For a commander: the order their General last gave them. */
   myOrder: { text: string; from: string } | null;
+  /** Shown while the player's army (a reserve slot) hasn't arrived yet. */
+  waiting: string | null;
+  /** Per side: victory points or waves, when the battle keeps score. */
+  notes: string[];
+  /** Gold buys reinforcements for us in this battle. */
+  goldMode: boolean;
+  /** Our army can't take more units. */
+  armyFull: boolean;
+  faction: string;
+  pal: number;
 }
 
 export function emptyHud(): HudState {
@@ -93,6 +103,12 @@ export function emptyHud(): HudState {
     sides: [],
     mySide: 0,
     armyName: '',
+    waiting: null,
+    notes: [],
+    goldMode: false,
+    armyFull: false,
+    faction: '',
+    pal: 0,
     role: '',
     gold: 0,
     ready: false,
@@ -168,7 +184,9 @@ export function buildHud(s: GameSession): HudState {
   const w = b.world;
   const me = s.me;
   const myArmy = me ? b.army(me.army) : undefined;
-  const mySide = myArmy?.side ?? 0;
+  const mySide = Math.max(0, s.mySide);
+  // A reserve slot: the army arrives later in the battle.
+  const waitingFor = me && !myArmy && me.role !== 'spectator' ? b.scenario.sides[mySide]?.slots.find((sl) => sl.key === me.slot) : undefined;
   const sides: SideInfo[] = w.sides.map((sd, i) => {
     let alive = 0;
     let start = 0;
@@ -201,6 +219,17 @@ export function buildHud(s: GameSession): HudState {
       });
     }
   }
+  // Victory points (Capture & Hold) or waves (Last Stand).
+  const sc = b.scenario;
+  const pts = sc.victory.find((r) => r.k === 'points');
+  const notes = w.sides.map((sd, i) => {
+    if (sc.waves) return i === 0 ? `wave ${w.scenario.wave}/${sc.waves.count}, ${sd.score} beaten` : '';
+    if (pts?.k === 'points') return `${sd.score}/${pts.target} pts`;
+    return '';
+  });
+  const rec = sc.recruit;
+  const goldMode = !!rec && !!myArmy && me?.role !== 'spectator' && (!rec.sides || rec.sides.includes(myArmy.side));
+  const armyFull = !!rec && !!myArmy && w.units.filter((u) => u.army === myArmy.id && u.st !== 'gone').length >= rec.maxUnits;
   let possessed: HudState['possessed'] = null;
   if (me?.poss) {
     const so = b.soldier(me.poss);
@@ -216,7 +245,13 @@ export function buildHud(s: GameSession): HudState {
     result: w.result ? { winner: w.result.winner, reason: w.result.reason, mine: w.result.winner === mySide } : null,
     sides,
     mySide,
-    armyName: myArmy ? `${myArmy.name}: ${myArmy.title}` : 'Spectating',
+    armyName: myArmy ? `${myArmy.name}: ${myArmy.title}` : waitingFor ? `${waitingFor.name}: ${waitingFor.title}` : 'Spectating',
+    notes,
+    goldMode,
+    armyFull,
+    faction: myArmy?.faction ?? '',
+    pal: myArmy?.pal ?? 0,
+    waiting: waitingFor ? `${waitingFor.name} and ${waitingFor.title} arrive later in the battle. Watch the field until then.` : null,
     role: me?.role ?? 'spectator',
     gold: Math.floor(me?.gold ?? 0),
     ready: !!me?.ready,

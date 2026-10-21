@@ -7,14 +7,15 @@ import { randRange } from '../math/rng';
 import type { Soldier, Unit } from '../types';
 import { ACT, UF } from '../types';
 import { meleeStrike } from './damage';
+import { isRanged } from './missiles';
 
 /** How far (m) a soldier looks for someone to fight, given what his unit is doing. */
 function searchRadius(b: Battle, u: Unit, s: Soldier): number {
   const t = b.typeOf(u);
   const selfDefense = t.reach + t.radius + 1.6;
   if (u.st === 'routing' || u.st === 'shattered' || u.st === 'rallying') return 0;
-  const ranged = t.missile && t.missile.kind !== 'pilum' && t.cls !== 'inf';
-  if (ranged && u.ammo > 0 && !(u.order.k === 'attack' && u.engaged > 0)) return selfDefense;
+  const ranged = isRanged(u, b);
+  if (ranged && (u.ammo > 0 || !b.world.settings.ammo) && !(u.order.k === 'attack' && u.engaged > 0)) return selfDefense;
   if (u.flags & UF.hold) return selfDefense;
   if (u.order.k === 'attack') {
     const tu = b.unit(u.order.target);

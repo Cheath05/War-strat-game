@@ -1,7 +1,9 @@
 // Shared helpers for the three levels of AI.
 
 import type { Battle } from '../battle';
-import { dist, norm } from '../math/det';
+import { clamp, dist, norm } from '../math/det';
+import { passableAt } from '../map/mapgen';
+import { MOVE } from '../map/terrain';
 import type { Army, Detachment, Unit } from '../types';
 import { frontageOf } from '../units/formation';
 import { isRanged } from '../combat/missiles';
@@ -19,8 +21,10 @@ export function isCav(b: Battle, u: Unit): boolean {
   return !!t.mounted || t.cls === 'chariot' || t.cls === 'ele';
 }
 
+/** Foot missile troops and horse archers with ammo left: kept out of the line, fire from range. */
 export function isMissile(b: Battle, u: Unit): boolean {
-  return isRanged(u, b) && !isCav(b, u);
+  if (b.world.settings.ammo && u.ammo <= 0) return false;
+  return isRanged(u, b) && (!isCav(b, u) || b.typeOf(u).cls === 'hacav');
 }
 
 /** Rough fighting value of a unit (for force ratios). */
@@ -109,4 +113,49 @@ export function aiDetachment(b: Battle, d: Detachment): boolean {
   if (!d.ctrl) return true;
   const p = b.player(d.ctrl);
   return !p || !p.on;
+}
+
+/** Free ground (m) to the left and right of (x, y) along (rx, ry) for men on foot, up to max. */
+export function roomAt(b: Battle, x: number, y: number, rx: number, ry: number, max = 200): [number, number] {
+  const side = (s: number): number => {
+    for (let d = 2; d <= max; d += 2) if (!passableAt(b.map, x + rx * s * d, y + ry * s * d, MOVE.foot)) return d - 2;
+    return max;
+  };
+  return [side(-1), side(1)];
+}
+
+/**
+ * Lays out blocks of the given widths side by side across the facing (fx, fy) at (x, y).
+ * On open ground that's one row centred on the point. Where the ground is narrower (a
+ * pass, a bridge, a gap in a wall) the row shifts to fit, and the blocks that don't fit
+ * stack behind in rows `depth` metres apart. Returns each block's [lateral, back] offset.
+ */
+export function fitRow(b: Battle, x: number, y: number, fx: number, fy: number, widths: number[], gap: number, depth: number): [number, number][] {
+  const rx = -fy;
+  const ry = fx;
+  const out: [number, number][] = [];
+  let room: [number, number] = [200, 200];
+  let back = 0;
+  let i = 0;
+  while (i < widths.length) {
+    const px = x - fx * back;
+    const py = y - fy * back;
+    if (passableAt(b.map, px, py, MOVE.foot)) room = roomAt(b, px, py, rx, ry);
+    const [L, R] = room;
+    let w = widths[i]!;
+    let j = i + 1;
+    while (j < widths.length && w + gap + widths[j]! <= L + R) {
+      w += gap + widths[j]!;
+      j++;
+    }
+    const mid = w <= L + R ? clamp(0, -L + w / 2, R - w / 2) : (R - L) / 2;
+    let cur = mid - w / 2;
+    for (let k = i; k < j; k++) {
+      out.push([cur + widths[k]! / 2, back]);
+      cur += widths[k]! + gap;
+    }
+    i = j;
+    back += depth;
+  }
+  return out;
 }

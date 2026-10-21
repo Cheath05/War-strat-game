@@ -15,6 +15,7 @@ import { processPaths, updateAnchors, steerSoldiers } from './units/movement';
 import { updatePossession } from './roles/possession';
 import { acquireTargets, resolveMelee } from './combat/melee';
 import { resolveCharges } from './combat/charge';
+import { updateBeasts } from './combat/beasts';
 import { updateMissiles } from './combat/missiles';
 import { updateMorale } from './morale/morale';
 import { updateTimers } from './roles/abilities';
@@ -49,7 +50,7 @@ export class Battle {
   constructor(world: World) {
     this.world = world;
     this.map = buildMap(world.map);
-    this.scenario = scenarioDef(world.scenario.id);
+    this.scenario = scenarioDef(world.scenario.id, world.scenario.opts);
     this.grid = new SpatialGrid(this.map.wm, this.map.hm);
     this.reindex();
   }
@@ -197,6 +198,7 @@ export class Battle {
     steerSoldiers(this);
     this.grid.rebuild(w.soldiers);
     resolveCharges(this);
+    updateBeasts(this);
     resolveMelee(this);
     updateMissiles(this);
     updateMorale(this);

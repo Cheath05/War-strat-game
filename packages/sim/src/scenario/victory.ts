@@ -4,13 +4,20 @@
 import type { Battle } from '../battle';
 import { TICK_HZ } from '../constants';
 
+/**
+ * A side is broken when nothing it has on the field is still willing to fight, or what is
+ * left is a remnant (under 8% of the men it brought), with no reinforcements to come.
+ */
 export function sideBroken(b: Battle, side: number): boolean {
+  if (b.world.scenario.vars[`pending${side}`] ?? 0) return false;
+  let fighting = 0;
+  let brought = 0;
   for (const u of b.world.units) {
     if (u.side !== side) continue;
-    if (u.st !== 'gone' && u.st !== 'routing' && u.st !== 'shattered') return false;
+    brought += u.max;
+    if (u.st !== 'gone' && u.st !== 'routing' && u.st !== 'shattered') fighting += u.sol.length;
   }
-  // Reinforcements still to come keep a side in the fight.
-  return !(b.world.scenario.vars[`pending${side}`] ?? 0);
+  return fighting === 0 || fighting < brought * 0.08;
 }
 
 export function countInZone(b: Battle, side: number, zone: string): number {
@@ -55,6 +62,13 @@ export function checkVictory(b: Battle): void {
       case 'points':
         for (const side of [0, 1]) {
           if (w.sides[side]!.score >= rule.target) return endBattle(b, side, 'victory points');
+        }
+        break;
+      case 'deadline':
+        if (t >= rule.seconds * TICK_HZ) {
+          const s0 = w.sides[0]!.score;
+          const s1 = w.sides[1]!.score;
+          return endBattle(b, s0 === s1 ? -1 : s0 > s1 ? 0 : 1, 'most victory points at the deadline');
         }
         break;
     }

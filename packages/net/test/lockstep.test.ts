@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, HASH_EVERY, TICKS_PER_TURN, type Command, type Unit } from '@pl/sim';
-import { LockstepDriver, RoomCore, type RoomTransport, type S2C } from '../src';
+import { LockstepDriver, PROTOCOL_VERSION, RoomCore, type RoomTransport, type S2C } from '../src';
 
 /** A virtual-time network with latency and jitter between clients and the relay. */
 class FakeNet {
@@ -82,7 +82,7 @@ class FakeClient {
   connect(token = ''): void {
     this.online = true;
     this.room.open(this.conn);
-    this.send({ t: 'hello', name: this.name, token: token || undefined, v: 1 });
+    this.send({ t: 'hello', name: this.name, token: token || undefined, v: PROTOCOL_VERSION });
   }
 
   send(m: unknown): void {

@@ -2,7 +2,7 @@
 
 import type { ArmySetup, BattleSetup, Command, MapRef, Settings, TaggedCommand } from '@pl/sim';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export interface LobbyPlayer {
   id: number;
@@ -26,7 +26,8 @@ export interface LobbyState {
   players: LobbyPlayer[];
   /** Recruited armies (gold modes), by slot. */
   armies: ArmySetup[];
-  gold: number;
+  /** Choices for scenarios with options (map, factions...). */
+  options: Record<string, string>;
 }
 
 export type LobbyOp =
@@ -35,8 +36,9 @@ export type LobbyOp =
   | { op: 'map'; map: MapRef | null }
   | { op: 'claim'; role: LobbyPlayer['role']; slot: string; det: number }
   | { op: 'ready'; on: boolean }
-  | { op: 'army'; army: ArmySetup }
-  | { op: 'gold'; gold: number }
+  /** A General's recruited army (gold modes); an empty list goes back to the default army. */
+  | { op: 'army'; units: string[] }
+  | { op: 'options'; options: Record<string, string> }
   | { op: 'start' }
   | { op: 'kick'; id: number }
   | { op: 'name'; name: string };

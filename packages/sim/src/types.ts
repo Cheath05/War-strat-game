@@ -151,6 +151,9 @@ export interface DetOrder {
   /** Player id who gave it; 0 for the AI general. */
   by: number;
   at: number;
+  /** Facing to hold (a scenario position); absent or 0,0: face the enemy. */
+  fx?: number;
+  fy?: number;
 }
 
 export interface Detachment {
@@ -200,6 +203,8 @@ export interface Army {
   directive: string;
   /** Deployment zone [x0, y0, x1, y1] in metres. */
   zone: number[];
+  /** The zone's facing [dx, dy] (a 'hold' army keeps facing this way). */
+  face: number[];
   /** Where reinforcements arrive and routers flee: point on the map edge, facing inward. */
   edgeX: number;
   edgeY: number;
@@ -214,6 +219,10 @@ export interface PlayerState {
   id: number;
   name: string;
   role: 'general' | 'commander' | 'spectator';
+  /** Lobby slot key (armies that arrive later look their players up by it). */
+  slot: string;
+  /** Detachment index chosen in the lobby (commanders). */
+  detIndex: number;
   army: number;
   det: number;
   on: boolean;
@@ -293,6 +302,8 @@ export interface Settings {
 
 export interface ScenarioState {
   id: string;
+  /** Lobby choices the scenario was configured with. */
+  opts: Record<string, string>;
   /** Ticks since the battle phase began. */
   t: number;
   fired: string[];

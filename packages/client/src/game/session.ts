@@ -3,6 +3,7 @@
 // React shows. Solo games get their turns from a local clock; multiplayer from the relay.
 
 import { Battle, TICK_HZ, TICKS_PER_TURN, controls, type Command, type PlayerState, type SimEvent, type TaggedCommand, type Unit } from '@pl/sim';
+import { FogOfWar } from './fog';
 import { LockstepDriver } from '@pl/net';
 import { createStore, type Store } from '../app/store';
 import { BattleRenderer } from './render/BattleRenderer';
@@ -70,6 +71,10 @@ export class GameSession {
   fps = 0;
   private stopped = false;
   private stateReq = 0;
+  /** Army id we commanded last tick (0 while a reserve army is still on its way). */
+  private lastArmy = 0;
+  private fog: FogOfWar | null = null;
+  private fogTimer = 0;
   /** Paused by the relay (multiplayer), and by whom. */
   remotePaused = false;
   pausedBy = '';
@@ -125,11 +130,13 @@ export class GameSession {
     // Dev-only handle for debugging in the browser console.
     if (import.meta.env.DEV) (window as unknown as { __pl: GameSession }).__pl = this;
     r.mine = (u) => this.mine(u);
+    r.visible = (u) => !this.fog || this.mySide < 0 || this.fog.visible(u, this.mySide);
     r.orderMarkers = () => this.orderMarkers();
     this.input = new BattleInput(this, r, container);
-    // Start the camera over our own army, looking toward the enemy.
+    // Start the camera over our own army (or our side, if ours arrives later), looking toward the enemy.
     const me = this.me;
-    const army = me ? this.battle.army(me.army) : this.battle.world.armies[0];
+    this.lastArmy = me?.army ?? 0;
+    const army = me ? (this.battle.army(me.army) ?? this.battle.world.armies.find((a) => a.side === this.mySide)) : this.battle.world.armies[0];
     if (army) {
       let zx = (army.zone[0]! + army.zone[2]!) / 2;
       let zy = (army.zone[1]! + army.zone[3]!) / 2;
@@ -171,6 +178,7 @@ export class GameSession {
       const me = this.me;
       const army = me && this.battle.world.phase === 'deploy' ? this.battle.army(me.army) : undefined;
       this.renderer.zone = army ? army.zone : null;
+      this.updateFog(dt);
     }
     this.input?.update(dt);
     this.renderer?.render(dt, this.driver.alpha);
@@ -188,13 +196,52 @@ export class GameSession {
     }
   }
 
+  /** Fog of war, four times a second; everything shows once the battle is over (or for spectators). */
+  private updateFog(dt: number): void {
+    const b = this.battle;
+    const on = b.world.settings.fog && b.world.phase !== 'ended' && this.mySide >= 0;
+    if (!on) {
+      if (this.fog) {
+        this.fog = null;
+        this.renderer?.setFog(null);
+      }
+      return;
+    }
+    this.fogTimer -= dt;
+    if (this.fog && this.fogTimer > 0) return;
+    this.fogTimer = 0.25;
+    if (!this.fog || this.fog.w !== Math.ceil(b.map.wm / 4)) this.fog = new FogOfWar(b);
+    this.fog.update(b, this.mySide);
+    this.renderer?.setFog(this.fog.data);
+  }
+
+  /** The side this player fights for (also while their army hasn't arrived yet). */
+  get mySide(): number {
+    const me = this.me;
+    if (!me) return -1;
+    const a = this.battle.army(me.army);
+    if (a) return a.side;
+    return this.battle.scenario.sides.findIndex((s) => s.slots.some((sl) => sl.key === me.slot));
+  }
+
   private afterTick(b: Battle): void {
     this.renderer?.afterTick(b);
     const me = this.opts.playerId;
+    // Our army has just arrived (a reserve slot): fly the camera to it.
+    const p = this.me;
+    if (p && p.army !== this.lastArmy) {
+      const a = b.army(p.army);
+      const g = a ? b.soldier(a.genSoldier) : undefined;
+      if (this.lastArmy === 0 && g) {
+        this.renderer?.rig.jump(g.x, g.y);
+        this.messages.push({ id: b.world.tick * 100 + this.messages.length, text: `${a!.name} and ${a!.title} have arrived. They are yours to command!`, tone: 'epic', at: performance.now() });
+      }
+      this.lastArmy = p.army;
+    }
+    const mySide = this.mySide;
     for (const e of b.events) {
       if (e.k !== 'msg') continue;
       if (e.to && e.to !== me) continue;
-      const mySide = this.me ? (b.army(this.me.army)?.side ?? -1) : -1;
       if (e.side >= 0 && e.side !== mySide) continue;
       this.messages.push({ id: b.world.tick * 100 + this.messages.length, text: e.text, tone: e.tone, at: performance.now() });
     }

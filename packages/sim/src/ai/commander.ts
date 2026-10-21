@@ -8,7 +8,8 @@ import type { Detachment, Unit } from '../types';
 import { UF } from '../types';
 import { orderAttack, orderMove } from '../commands';
 import { attackerOf } from './captain';
-import { aiDetachment, centroid, detUnits, fighting, isCav, isMissile, nearestEnemy, towardEnemy, unitFrontage } from './util';
+import { aiDetachment, centroid, detUnits, fighting, fitRow, isCav, isMissile, nearestEnemy, roomAt, towardEnemy, unitFrontage } from './util';
+import { depthOf } from '../units/formation';
 
 const EVERY = 10;
 
@@ -74,7 +75,8 @@ export function moveIfNeeded(b: Battle, u: Unit, x: number, y: number, fx: numbe
  * that come within `engage` metres.
  */
 function line(b: Battle, d: Detachment, units: Unit[], x: number, y: number, engage: number, run: boolean): void {
-  const [fx, fy] = towardEnemy(b, x, y, d.side, units[0]!.dx, units[0]!.dy);
+  const o = d.order;
+  const [fx, fy] = o.fx || o.fy ? [o.fx!, o.fy!] : towardEnemy(b, x, y, d.side, units[0]!.dx, units[0]!.dy);
   const rx = -fy;
   const ry = fx;
   const main = units.filter((u) => !isMissile(b, u) && !isCav(b, u));
@@ -83,29 +85,38 @@ function line(b: Battle, d: Detachment, units: Unit[], x: number, y: number, eng
   const enemy = nearestEnemy(b, x, y, d.side, 1e9);
   const enemyD = enemy ? dist(x, y, b.center(enemy).x, b.center(enemy).y) : 1e9;
 
-  const place = (row: Unit[], fwd: number, lat0 = 0): void => {
-    const total = row.reduce((s, u) => s + unitFrontage(b, u), 0) + Math.max(0, row.length - 1) * 3;
-    let cur = lat0 - total / 2;
-    for (const u of row) {
-      const fw = unitFrontage(b, u);
-      const lat = cur + fw / 2;
-      cur += fw + 3;
-      const tx = x + rx * lat + fx * fwd;
-      const ty = y + ry * lat + fy * fwd;
-      if (!engageNear(b, u, engage)) moveIfNeeded(b, u, tx, ty, fx, fy, run);
-    }
+  // Rows fit the ground: in a pass the units that don't fit stand behind. Returns the
+  // depth the rows took up.
+  const place = (row: Unit[], fwd: number, r = engage): number => {
+    if (!row.length) return 0;
+    const deep = Math.max(8, ...row.map((u) => depthOf(u, b.typeOf(u), u.sol.length, u.width) + 4));
+    const at = fitRow(b, x + fx * fwd, y + fy * fwd, fx, fy, row.map((u) => unitFrontage(b, u)), 3, deep);
+    row.forEach((u, k) => {
+      const [lat, back] = at[k]!;
+      const tx = x + rx * lat + fx * (fwd - back);
+      const ty = y + ry * lat + fy * (fwd - back);
+      if (!engageNear(b, u, r)) moveIfNeeded(b, u, tx, ty, fx, fy, run);
+    });
+    return at[at.length - 1]![1] + deep;
   };
-  place(main, 0);
+  const mainDepth = place(main, 0);
   // Skirmishers in front until the enemy is close, then behind the line.
-  place(screen, enemyD < 45 && main.length ? -14 : main.length ? 12 : 0);
+  place(screen, enemyD < 45 && main.length ? -mainDepth - 6 : main.length ? 12 : 0);
+  // Cavalry on the ends where there's room, else behind everyone.
   const mainW = main.reduce((s, u) => s + unitFrontage(b, u), 0) + 6;
-  cav.forEach((u, i) => {
-    const side = i % 2 === 0 ? 1 : -1;
-    const lat = side * (mainW / 2 + unitFrontage(b, u) / 2 + 6 + Math.floor(i / 2) * 14);
-    const tx = x + rx * lat;
-    const ty = y + ry * lat;
-    if (!engageNear(b, u, engage + 10)) moveIfNeeded(b, u, tx, ty, fx, fy, run);
-  });
+  const [L, R] = roomAt(b, x, y, rx, ry);
+  const cavW = cav.reduce((s, u) => s + unitFrontage(b, u) + 6, 0);
+  if (Math.min(L, R) >= mainW / 2 + cavW / 2 + 8) {
+    cav.forEach((u, i) => {
+      const side = i % 2 === 0 ? 1 : -1;
+      const lat = side * (mainW / 2 + unitFrontage(b, u) / 2 + 6 + Math.floor(i / 2) * 14);
+      const tx = x + rx * lat;
+      const ty = y + ry * lat;
+      if (!engageNear(b, u, engage + 10)) moveIfNeeded(b, u, tx, ty, fx, fy, run);
+    });
+  } else {
+    place(cav, -mainDepth - 20, engage + 10);
+  }
 }
 
 /** Engages the nearest enemy within r of the unit; true if it did. */
@@ -230,6 +241,9 @@ function flank(b: Battle, d: Detachment, units: Unit[], side: number): void {
 
 /** Missile units harass from range and fall back from melee; others hold behind them. */
 function skirmish(b: Battle, d: Detachment, units: Unit[]): void {
+  // Skirmishers of a held position stay on a leash around it.
+  const o = d.order;
+  const leash = !!(o.fx || o.fy);
   for (const u of units) {
     const c = b.center(u);
     if (!isMissile(b, u)) {
@@ -238,8 +252,11 @@ function skirmish(b: Battle, d: Detachment, units: Unit[]): void {
     }
     u.flags |= UF.fireAtWill | UF.skirmish;
     const m = b.typeOf(u).missile!;
-    const e = nearestEnemy(b, c.x, c.y, d.side, 400);
-    if (!e) continue;
+    const e = leash ? nearestEnemy(b, o.x, o.y, d.side, 110) : nearestEnemy(b, c.x, c.y, d.side, 400);
+    if (!e) {
+      if (leash) moveIfNeeded(b, u, o.x, o.y, o.fx!, o.fy!, false, 10);
+      continue;
+    }
     const ec = b.center(e);
     const dd = dist(c.x, c.y, ec.x, ec.y);
     if (u.flags & UF.evading) continue;

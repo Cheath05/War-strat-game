@@ -63,26 +63,30 @@ All of this is data files, so adding a unit or a faction later is one file and d
 Every battle has two sides. If all of you are on one side, it's co-op against the AI; split up and it's PVP. The AI fills empty slots, so 1–4 players and spectators all work.
 
 - **Thermopylae (480 BC).**
-  - **The map:** the hand-made coastal pass between the cliffs and the sea, with the Phocian wall.
-  - **Greek slots:** Leonidas and the Spartans, Demophilus and the Thespians, the Peloponnesian allies, and the Phocians guarding the mountain path.
-  - **Persian slots:** Xerxes' waves (Medes and Cissians, archers and Sparabara), and Hydarnes with the Immortals.
-  - **The betrayal:** partway through, a shepherd reveals the mountain path, and the Immortals try to take the Greeks from behind. If the Phocians hold the path, history changes.
-  - **Winning:** the Greeks win by holding until the timer ends or by breaking the Persians. The Persians win by forcing enough soldiers through the pass or routing every Greek.
-  - **In PVP,** the Persian players spend gold to choose and time their waves.
+  - **The map:** the hand-made coastal pass between the cliffs and the sea. At the Middle Gate it narrows to about 20 m, closed by the Phocian wall with a gateway. The Anopaea path climbs through the mountains and comes down between the Greek rear and the far exit.
+  - **Greek slots:** Leonidas and the Three Hundred, Demophilus and the Thespians, Leontiades with the Thebans and Arcadians, and Hegesander with the Phocians on the mountain path. Armies sharing a narrow zone stand one behind the other, and lines too wide for the pass stack in depth.
+  - **Persian slots:** Datis (Medes and Cissians) and Mardonius (Sparabara) at the start. Xerxes' host arrives at 6 minutes, and Hydarnes with the Immortals at 8. Both arrive later and can be claimed in the lobby; until then their players watch.
+  - **Waves:** every 100 s until minute 15, fresh troops join an AI-led Persian army. Difficulty shifts all of these times: on Legendary waves come every 70 s and the Immortals at 6 minutes. Hard and Legendary waves are bigger, and each Greek player beyond the first adds a unit.
+  - **The betrayal:** a minute of rumours, then the Immortals march the mountain path. If the Phocians break them there, history changes.
+  - **Winning:** the Greeks win by holding for 18 minutes, or by breaking the Persians once no more are coming. The Persians win by getting 50 men into the far exit, or by routing every Greek.
+  - **In PVP,** human Persians earn 60 gold a minute plus gold for kills, and spend it on reinforcements.
 - **Last Stand (survival).**
-  - Choose a map template (hill fort, river ford or coastal pass), your factions and the enemy faction.
-  - Recruit with gold, then hold out against bigger and bigger waves.
-  - Between waves you get a breather and gold for reinforcements. Your score is the number of waves survived.
+  - Lobby choices: the battlefield (the hill fort, the river crossing or the Hot Gates), your faction and the enemy's.
+  - Four armies hold the position. Each General recruits with 3,000 gold, and the AI leads any army nobody claims.
+  - Ten waves come from the map edges, each bigger than the last: two armies at once from wave 5, three from wave 9.
+  - A wave counts as beaten when fewer than one in seven of its troops still fight. Each player then gets 250 + 100 × the wave number in gold, AI-led allies get half their missing men back, and the next wave comes 30 s later. A wave not beaten after three minutes doesn't hold back the next.
+  - Your score is the number of waves beaten. Beating all ten wins.
 - **Objective battles** (PVE or PVP):
-  - **Capture & Hold:** three points earn victory points.
-  - **Defend the Bridge:** the attackers must get across the river, by the bridge or the fords, before time runs out.
+  - **Capture & Hold:** three points on the plains, the river crossing or the hill fort. Each point held scores a victory point a second. 1,200 wins; otherwise most points after 20 minutes. 4,000 gold per army, plus 60 a minute.
+  - **Defend the Bridge:** the attackers must get 60 men across the river, by the bridge or the fords, within 15 minutes. The defenders have 3,500 gold per army and the attackers 5,500. One AI attacker goes for the bridge and one marches round by the north ford.
 
 ## Economy (Last Stand, Objective battles, and the Persian side in PVP Thermopylae)
 - **Gold is per player.** A General's gold buys units for their army; a Commander's gold buys units for their own detachment.
-- **Before the battle:** recruit on the recruitment screen. Units group into detachments automatically, and you can rearrange them. Each army has a unit cap.
-- **During the battle:** earn gold from kills, from holding objectives and from surviving waves. Spend it on:
-  - new units, which march in from your edge of the map after about 20 s;
-  - topping up worn-down units that are out of combat near your General or your map edge.
+- **Before the battle:** Generals recruit in the lobby (or on the solo screen). Units group into detachments automatically: line infantry in blocks of four, then missiles, then cavalry. "Balanced army" picks a mix for you, and the AI uses the same rule for the armies it leads. The relay checks every army against the budget and the unit cap, and unspent gold carries into the battle.
+- **During the battle:** earn a fifth of each fallen enemy's price, steady income in some modes, and a bonus for each Last Stand wave beaten. Spend it on:
+  - new units, which march in from your edge of the map (the Reinforce panel);
+  - topping up worn-down units that are out of combat near your General or your map edge (Replenish, at a quarter over the unit's price per man).
+- **Fog of war** (lobby switch): enemies show only within sight of your troops: 130 m on foot, 160 m mounted, and 40 m for enemies in forest. Only the view is fogged: the AI sees everything.
 
 ## The look: HD-2D
 - **What makes HD-2D.** 2D pixel-art characters stand in a 3D world that's lit like a modern game, with:

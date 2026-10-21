@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { faction, listScenarios, scenarioDef, unitType, type Settings } from '@pl/sim';
+import { budgetFor, faction, listScenarios, scenarioDef, unitType, type Settings } from '@pl/sim';
+import { RecruitPanel, ScenarioOptions } from './Recruit';
 import type { C2S, LobbyState } from '@pl/net';
 import type { ConnStatus } from '../net/connection';
 
@@ -37,6 +38,7 @@ export function Lobby({
 }) {
   const [msg, setMsg] = useState('');
   const [copied, setCopied] = useState(false);
+  const [recruiting, setRecruiting] = useState(false);
   if (!lobby) {
     return (
       <div className="screen title-bg">
@@ -49,8 +51,14 @@ export function Lobby({
       </div>
     );
   }
-  const sc = scenarioDef(lobby.scenario);
+  const sc = scenarioDef(lobby.scenario, lobby.options);
+  const raw = listScenarios().find((x) => x.id === lobby.scenario) ?? sc;
   const self = lobby.players.find((p) => p.id === me);
+  // The units of a slot's army: recruited in this lobby, or the scenario's own.
+  const unitsOf = (slot: string): string[] | undefined => lobby.armies.find((a) => a.slot === slot)?.dets.flatMap((d) => d.units);
+  const detsOf = (slot: string, fallback: { name: string; units: string[] }[]): { name: string; units: string[] }[] => lobby.armies.find((a) => a.slot === slot)?.dets ?? fallback;
+  const mySlot = self?.role === 'general' ? sc.sides.flatMap((x, si) => x.slots.map((sl) => ({ sl, si }))).find((x) => x.sl.key === self.slot) : undefined;
+  const myBudget = mySlot ? budgetFor(sc, mySlot.si) : 0;
   const host = !!self?.host;
   const s = lobby.settings;
   const setRule = (p: Partial<Settings>): void => send({ t: 'lobby', op: 'settings', settings: { ...s, ...p } });
@@ -110,6 +118,7 @@ export function Lobby({
                 </div>
               ))}
           </div>
+          <ScenarioOptions sc={raw} choices={lobby.options} onChange={host ? (c) => send({ t: 'lobby', op: 'options', options: c }) : undefined} />
         </section>
 
         <section>
@@ -120,15 +129,21 @@ export function Lobby({
                 <div className="ff-title" style={{ fontSize: 18 }}>
                   {side.name} <span className="dim">· {side.role}</span>
                 </div>
+                {side.aiOnly && (
+                  <div className="ff-window" style={{ padding: '8px 10px' }}>
+                    {sc.waves ? `${sc.waves.count} waves of ${faction(side.faction).name}, each bigger than the last.` : 'Led by the AI.'} <span className="dim">Only the AI plays this side.</span>
+                  </div>
+                )}
                 {side.slots
-                  .filter((sl) => !sl.reserve)
+                  .filter(() => !side.aiOnly)
                   .map((sl) => {
                     const general = players.find((p) => p.role === 'general' && p.slot === sl.key);
+                    const recruited = unitsOf(sl.key);
                     return (
                       <div key={sl.key} className="ff-window" style={{ padding: '8px 10px' }}>
                         <div className="row" style={{ justifyContent: 'space-between' }}>
                           <span>
-                            <b style={{ color: 'var(--gold)' }}>{sl.name}</b> <span className="dim">· {sl.title}</span>
+                            <b style={{ color: 'var(--gold)' }}>{sl.name}</b> <span className="dim">· {sl.title}</span> {sl.reserve && <span className="tag">arrives mid-battle</span>}
                           </span>
                           <span className="dim" style={{ fontSize: 12 }}>
                             {faction(sl.faction).name}
@@ -141,9 +156,15 @@ export function Lobby({
                               Lead this army
                             </button>
                           )}
+                          {general?.id === me && myBudget > 0 && (
+                            <button className="ff-btn small" onClick={() => setRecruiting(true)}>
+                              Recruit army
+                            </button>
+                          )}
+                          {recruited && <span className="tag">recruited</span>}
                         </div>
                         <div className="col" style={{ gap: 3, marginTop: 4 }}>
-                          {sl.dets.map((d, i) => {
+                          {detsOf(sl.key, sl.dets).map((d, i) => {
                             const cmd = players.find((p) => p.role === 'commander' && p.slot === sl.key && p.det === i);
                             return (
                               <div key={i} className="row" style={{ fontSize: 13, gap: 6 }}>
@@ -225,6 +246,19 @@ export function Lobby({
             </div>
           </section>
         </div>
+
+        {recruiting && mySlot && (
+          <RecruitPanel
+            title={`${mySlot.sl.name}, ${mySlot.sl.title}`}
+            factionId={mySlot.sl.faction}
+            budget={myBudget}
+            maxUnits={sc.recruit?.maxUnits ?? 12}
+            units={unitsOf(mySlot.sl.key) ?? mySlot.sl.dets.flatMap((d) => d.units)}
+            pal={mySlot.si === 0 ? 0 : 2}
+            onChange={(units) => send({ t: 'lobby', op: 'army', units })}
+            onClose={() => setRecruiting(false)}
+          />
+        )}
 
         <section>
           <div className="dim">Chat</div>

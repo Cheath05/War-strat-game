@@ -12,6 +12,7 @@ import { MOVE } from '../map/terrain';
 import type { Soldier, Unit } from '../types';
 import { ACT, RANK, UF } from '../types';
 import { FORM, depthOf, slotOffset, spacing } from './formation';
+import { isRanged } from '../combat/missiles';
 
 const PATHS_PER_TICK = 6;
 
@@ -127,7 +128,7 @@ function attackMove(b: Battle, u: Unit, t: UnitTypeDef, c: { x: number; y: numbe
   const d = dist(c.x, c.y, tc.x, tc.y);
   const [tdx, tdy] = norm(tc.x - c.x, tc.y - c.y, u.dx, u.dy);
   // Missile units close to range and shoot; they only melee if caught.
-  if (t.missile && u.ammo > 0 && t.missile.kind !== 'pilum' && !(t.cls === 'inf')) {
+  if (t.missile && isRanged(u, b) && (u.ammo > 0 || !b.world.settings.ammo)) {
     const want = t.missile.range * 0.85;
     if (d > want) {
       chaseStep(b, u, t, tc, o.run);
