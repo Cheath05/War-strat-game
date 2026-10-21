@@ -4,6 +4,7 @@
 
 import { Battle, TICK_HZ, TICKS_PER_TURN, controls, type Command, type PlayerState, type SimEvent, type TaggedCommand, type Unit } from '@pl/sim';
 import { FogOfWar } from './fog';
+import { FrameLimiter } from './frameLimit';
 import { music } from '../audio/music';
 import { BattleSounds, ui } from '../audio/sfx';
 import { LockstepDriver } from '@pl/net';
@@ -71,6 +72,8 @@ export class GameSession {
   private fpsFrames = 0;
   private fpsTime = 0;
   fps = 0;
+  /** The frame-rate limit (Settings, or the battle menu). */
+  readonly limiter = new FrameLimiter();
   private stopped = false;
   private stateReq = 0;
   /** Army id we commanded last tick (0 while a reserve army is still on its way). */
@@ -89,6 +92,7 @@ export class GameSession {
     readonly opts: SessionOptions,
   ) {
     this.hud = createStore<HudState>(emptyHud());
+    this.limiter.cap = opts.graphics.fpsCap;
     this.driver = new LockstepDriver(battle, {
       send: (cmd) => (opts.send ? opts.send(cmd) : this.clock?.push(cmd)),
       hash: (tick, h) => {
@@ -161,7 +165,7 @@ export class GameSession {
     const loop = (t: number): void => {
       if (this.stopped) return;
       this.raf = requestAnimationFrame(loop);
-      this.frame(t);
+      if (this.limiter.due(t)) this.frame(t);
     };
     this.raf = requestAnimationFrame(loop);
     window.addEventListener('resize', this.onResize);

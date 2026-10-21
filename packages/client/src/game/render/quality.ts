@@ -32,7 +32,12 @@ export interface GraphicsSettings {
   /** 1 = native, 2 = chunky pixels (half resolution), 3 = very chunky. */
   pixelSize: number;
   showFps: boolean;
+  /** Most frames drawn a second; 0 draws one for every refresh of the screen. */
+  fpsCap: number;
 }
+
+/** The frame-rate limits a player can pick (0: no limit). */
+export const FPS_CAPS = [0, 30, 45, 60, 90, 120, 144];
 
 const KEY = 'pl.graphics';
 
@@ -92,5 +97,5 @@ function detectQuality(): QualityName {
 
 /** A first guess from the GPU and screen; the player can change it in Settings. */
 export function defaultGraphics(): GraphicsSettings {
-  return { quality: detectQuality(), blur: 'light', pixelSize: 1, showFps: false };
+  return { quality: detectQuality(), blur: 'light', pixelSize: 1, showFps: false, fpsCap: 0 };
 }

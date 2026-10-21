@@ -3,6 +3,7 @@ import { validCode } from '@pl/net';
 import { inviteCode, type Screen } from '../app/App';
 import { loadProfile, saveProfile } from '../app/profile';
 import { createRoom } from '../net/connection';
+import { Backdrop } from './Backdrop';
 
 export function Title({ go }: { go: (s: Screen) => void }) {
   const [name, setName] = useState(loadProfile().name);
@@ -39,59 +40,58 @@ export function Title({ go }: { go: (s: Screen) => void }) {
   };
 
   return (
-    <div className="screen title-bg">
-      <div className="menu">
-        <div className="logo">
-          PIXEL
-          <br />
-          LEGIONS
+    <div className="screen title-screen">
+      <Backdrop />
+      <div className="title-ui">
+        <div>
+          <h1 className="logo">
+            PIXEL
+            <br />
+            LEGIONS
+          </h1>
+          <div className="subtitle">Rome · Greece · Carthage · Persia · Macedon</div>
         </div>
-        <div className="subtitle">Rome · Greece · Carthage · Persia · Macedon</div>
-        <div className="ff-window col" style={{ alignItems: 'stretch', minWidth: 300 }}>
-          <label className="dim" htmlFor="name">
+        <div className="col" style={{ gap: 6 }}>
+          <label className="label" htmlFor="name">
             Your name, commander
           </label>
-          <input id="name" className="ff-input" value={name} maxLength={20} placeholder="e.g. Leonidas" onChange={(e) => setName(e.target.value)} onBlur={commit} />
+          <input id="name" className="field" value={name} maxLength={20} placeholder="e.g. Leonidas" onChange={(e) => setName(e.target.value)} onBlur={commit} />
         </div>
         {joining ? (
-          <div className="ff-window col" style={{ alignItems: 'stretch', minWidth: 300 }}>
-            <label className="dim" htmlFor="code">
+          <div className="col" style={{ gap: 6 }}>
+            <label className="label" htmlFor="code">
               Room code from your friend
             </label>
-            <input id="code" className="ff-input" value={code} maxLength={4} placeholder="ABCD" style={{ textTransform: 'uppercase', letterSpacing: 4 }} onChange={(e) => setCode(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && ok && join()} />
-            <div className="row">
-              <button className="ff-btn" disabled={!ok} onClick={join}>
+            <input id="code" className="field code" value={code} maxLength={4} placeholder="ABCD" onChange={(e) => setCode(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && ok && join()} />
+            <div className="row" style={{ marginTop: 6 }}>
+              <button className="btn primary" disabled={!ok} onClick={join}>
                 Join
               </button>
-              <button className="ff-btn" onClick={() => setJoining(false)}>
+              <button className="btn ghost" onClick={() => setJoining(false)}>
                 Back
               </button>
             </div>
           </div>
         ) : (
-          <div className="menu-list">
-            <button className="ff-btn big" disabled={!ok || busy} onClick={host}>
+          <nav className="menu-list">
+            <button className="menu-item" disabled={!ok || busy} onClick={host}>
               {busy ? 'Opening a room…' : 'Host a game'}
             </button>
-            <button className="ff-btn big" disabled={!ok} onClick={() => setJoining(true)}>
+            <button className="menu-item" disabled={!ok} onClick={() => setJoining(true)}>
               Join a game
             </button>
-            <button className="ff-btn big" disabled={!ok} onClick={() => (commit(), go({ k: 'solo' }))}>
+            <button className="menu-item" disabled={!ok} onClick={() => (commit(), go({ k: 'solo' }))}>
               Solo battle
             </button>
-            <button className="ff-btn big" onClick={() => go({ k: 'help' })}>
+            <button className="menu-item" onClick={() => go({ k: 'help' })}>
               How to play
             </button>
-            <button className="ff-btn big" onClick={() => go({ k: 'settings' })}>
+            <button className="menu-item" onClick={() => go({ k: 'settings' })}>
               Settings
             </button>
-          </div>
+          </nav>
         )}
-        {err && (
-          <div className="ff-window" style={{ color: 'var(--bad)' }}>
-            {err}
-          </div>
-        )}
+        {err && <div className="notice bad">{err}</div>}
       </div>
     </div>
   );

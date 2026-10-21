@@ -31,6 +31,7 @@ Not enough friends tonight? `npm run bots -- ABCD 2` adds two bot players to roo
 
 **Tips for game night**
 - Chrome, Edge, Firefox and Safari all work. On an older laptop, choose **Low** in Settings or a bigger **pixel size**.
+- A laptop running hot or loud? Set a **frame rate limit** (30 or 60) in Settings, or from **Menu** during a battle.
 - If the game ever says a player went out of sync, it fixes itself: that player's battle is copied from a healthy one.
 - **How to play** on the title screen lists every key.
 

@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { loadGraphics, saveGraphics, type GraphicsSettings, type QualityName } from '../game/render/quality';
+import { useState, type ReactNode } from 'react';
+import { FPS_CAPS, loadGraphics, saveGraphics, type BlurLevel, type GraphicsSettings, type QualityName } from '../game/render/quality';
 import { audio, type AudioPrefs } from '../audio/engine';
 import { ui } from '../audio/sfx';
+import { Backdrop } from './Backdrop';
+import { Segmented, Toggle, type SegOption } from './controls';
 
-const LEVELS = [0, 0.25, 0.5, 0.75, 1];
+const LEVELS: SegOption<number>[] = [0, 0.25, 0.5, 0.75, 1].map((v) => ({ v, label: v === 0 ? 'Off' : `${Math.round(v * 100)}%` }));
 
 const QUALITIES: { k: QualityName; name: string; desc: string }[] = [
   { k: 'low', name: 'Low', desc: 'No shadows or blur. For older laptops.' },
@@ -11,6 +13,24 @@ const QUALITIES: { k: QualityName; name: string; desc: string }[] = [
   { k: 'high', name: 'High', desc: 'Every soldier casts a real shadow.' },
   { k: 'ultra', name: 'Ultra', desc: 'Sharpest shadows and the most particles.' },
 ];
+
+/** Frame-rate limits to pick from (also in the battle menu). */
+export const FPS_OPTIONS: SegOption<number>[] = FPS_CAPS.map((v) => ({ v, label: v ? String(v) : 'No limit' }));
+
+const BLURS: SegOption<BlurLevel>[] = [
+  { v: 'off', label: 'Off' },
+  { v: 'light', label: 'Light' },
+  { v: 'strong', label: 'Strong' },
+];
+
+const PIXELS: SegOption<number>[] = [
+  { v: 1, label: 'Sharp' },
+  { v: 2, label: 'Chunky' },
+  { v: 3, label: 'Very chunky' },
+];
+
+/** The volume step nearest a saved level. */
+const nearest = (x: number): number => LEVELS.reduce((best, o) => (Math.abs(o.v - x) < Math.abs(best - x) ? o.v : best), 0);
 
 export function Settings({ back }: { back: () => void }) {
   const [g, setG] = useState<GraphicsSettings>(loadGraphics());
@@ -27,63 +47,65 @@ export function Settings({ back }: { back: () => void }) {
     saveGraphics(next);
   };
   return (
-    <div className="screen title-bg">
-      <div className="ff-window setup" style={{ position: 'relative', zIndex: 1, maxWidth: 640 }}>
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <h2 className="ff-title">Settings</h2>
-          <button className="ff-btn small" onClick={back}>
+    <div className="screen">
+      <Backdrop dim />
+      <div className="window settings">
+        <header className="window-head">
+          <h2 className="heading">Settings</h2>
+          <button className="btn small ghost" onClick={back}>
             Back
           </button>
-        </div>
-        <section>
-          <div className="dim">Graphics quality</div>
-          <div className="col">
-            {QUALITIES.map((q) => (
-              <button key={q.k} className={`ff-btn ${g.quality === q.k ? 'on' : ''}`} onClick={() => set({ quality: q.k })}>
-                {q.name} <span className="dim">· {q.desc}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-        <section>
-          <div className="dim">Sound</div>
-          {(['music', 'sfx'] as const).map((k) => (
-            <div key={k} className="row" style={{ marginTop: 4 }}>
-              <span style={{ minWidth: 90 }}>{k === 'music' ? 'Music' : 'Effects'}</span>
-              {LEVELS.map((v) => (
-                <button key={v} className={`ff-btn small ${Math.abs(a[k] - v) < 0.01 ? 'on' : ''}`} onClick={() => setAudio({ [k]: v })}>
-                  {v === 0 ? 'Off' : `${Math.round(v * 100)}%`}
+        </header>
+        <div className="window-body">
+          <section>
+            <div className="label">Graphics quality</div>
+            <div className="option-list">
+              {QUALITIES.map((q) => (
+                <button key={q.k} className={`option ${g.quality === q.k ? 'on' : ''}`} onClick={() => set({ quality: q.k })}>
+                  <span className="option-name">
+                    <span className={`lamp ${g.quality === q.k ? 'on' : ''}`} />
+                    {q.name}
+                  </span>
+                  <span className="dim">{q.desc}</span>
                 </button>
               ))}
             </div>
-          ))}
-        </section>
-        <section>
-          <div className="dim">Miniature blur at the top and bottom of the screen.</div>
-          <div className="row">
-            {(['off', 'light', 'strong'] as const).map((b) => (
-              <button key={b} className={`ff-btn small ${(g.blur ?? 'light') === b ? 'on' : ''}`} onClick={() => set({ blur: b })}>
-                {b === 'off' ? 'Off' : b === 'light' ? 'Light' : 'Strong'}
-              </button>
+            <Setting name="Frame rate limit" desc="At most this many frames a second. A limit keeps a laptop cooler and quieter.">
+              <Segmented options={FPS_OPTIONS} value={g.fpsCap} onChange={(fpsCap) => set({ fpsCap })} />
+            </Setting>
+            <Setting name="Miniature blur" desc="The tilt-shift blur at the top and bottom of the screen.">
+              <Segmented options={BLURS} value={g.blur ?? 'light'} onChange={(blur) => set({ blur })} />
+            </Setting>
+            <Setting name="Pixel size" desc="Bigger pixels look chunkier and run faster.">
+              <Segmented options={PIXELS} value={g.pixelSize} onChange={(pixelSize) => set({ pixelSize })} />
+            </Setting>
+            <Setting name="Frame rate counter" desc="Frames a second, in the corner during battle.">
+              <Toggle on={g.showFps} label={g.showFps ? 'Shown' : 'Hidden'} onChange={(showFps) => set({ showFps })} />
+            </Setting>
+          </section>
+          <section>
+            <div className="label">Sound</div>
+            {(['music', 'sfx'] as const).map((k) => (
+              <Setting key={k} name={k === 'music' ? 'Music' : 'Effects'}>
+                <Segmented options={LEVELS} value={nearest(a[k])} onChange={(v) => setAudio({ [k]: v })} />
+              </Setting>
             ))}
-          </div>
-        </section>
-        <section>
-          <div className="dim">Pixel size: bigger pixels look chunkier and run faster.</div>
-          <div className="row">
-            {[1, 2, 3].map((n) => (
-              <button key={n} className={`ff-btn small ${g.pixelSize === n ? 'on' : ''}`} onClick={() => set({ pixelSize: n })}>
-                {n === 1 ? 'Sharp' : n === 2 ? 'Chunky' : 'Very chunky'}
-              </button>
-            ))}
-          </div>
-        </section>
-        <section>
-          <button className={`ff-btn small ${g.showFps ? 'on' : ''}`} onClick={() => set({ showFps: !g.showFps })}>
-            Show frame rate: {g.showFps ? 'on' : 'off'}
-          </button>
-        </section>
+          </section>
+        </div>
       </div>
+    </div>
+  );
+}
+
+/** One setting: its name and a line of help, with the control on the right. */
+function Setting({ name, desc, children }: { name: string; desc?: string; children: ReactNode }) {
+  return (
+    <div className="setting">
+      <div>
+        <div>{name}</div>
+        {desc && <div className="setting-desc">{desc}</div>}
+      </div>
+      {children}
     </div>
   );
 }
