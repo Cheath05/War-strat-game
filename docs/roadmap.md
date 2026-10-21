@@ -14,7 +14,7 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
   - Three.js scene, pixel art and post effects;
   - camera, controls and HUD;
   - the local relay.
-- [ ] **M3 Multiplayer:**
+- [x] **M3 Multiplayer:**
   - RoomCore relay, lobby and LockstepDriver;
   - resync, reconnect and pause;
   - the Node host, bots and the integration test.

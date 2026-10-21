@@ -46,6 +46,12 @@ export interface SessionOptions {
   send?: (cmd: Command) => void;
   /** Multiplayer: report a hash to the relay. */
   hash?: (tick: number, hash: number) => void;
+  /** Multiplayer: answer the relay's request for our battle state. */
+  sendState?: (req: number, tick: number, data: string) => void;
+  /** Multiplayer: ask the relay to pause or resume for everyone. */
+  pause?: (on: boolean) => void;
+  /** Multiplayer: show a map ping to everyone. */
+  ping?: (x: number, y: number) => void;
   onEvents?: (events: SimEvent[], b: Battle) => void;
 }
 
@@ -63,6 +69,12 @@ export class GameSession {
   private fpsTime = 0;
   fps = 0;
   private stopped = false;
+  private stateReq = 0;
+  /** Paused by the relay (multiplayer), and by whom. */
+  remotePaused = false;
+  pausedBy = '';
+  /** Recent world hashes by tick (for checking two computers agree while debugging). */
+  readonly hashLog = new Map<number, number>();
 
   constructor(
     battle: Battle,
@@ -71,7 +83,11 @@ export class GameSession {
     this.hud = createStore<HudState>(emptyHud());
     this.driver = new LockstepDriver(battle, {
       send: (cmd) => (opts.send ? opts.send(cmd) : this.clock?.push(cmd)),
-      hash: opts.hash,
+      hash: (tick, h) => {
+        this.hashLog.set(tick, h);
+        if (this.hashLog.size > 120) this.hashLog.delete(this.hashLog.keys().next().value!);
+        opts.hash?.(tick, h);
+      },
       beforeTick: (b) => this.renderer?.beforeTick(b),
       afterTick: (b) => this.afterTick(b),
     });
@@ -131,6 +147,10 @@ export class GameSession {
     this.last = t;
     this.clock?.update(dt * 1000);
     this.driver.update(dt * 1000);
+    if (this.stateReq && this.driver.battle.world.tick % TICKS_PER_TURN === 0) {
+      this.opts.sendState?.(this.stateReq, this.driver.battle.world.tick, this.driver.battle.serialize());
+      this.stateReq = 0;
+    }
     if (this.renderer && this.renderer.battle !== this.driver.battle) this.renderer.setBattle(this.driver.battle);
     if (this.renderer) {
       const me = this.me;
@@ -165,6 +185,29 @@ export class GameSession {
     }
     if (this.messages.length > 30) this.messages.splice(0, this.messages.length - 30);
     this.opts.onEvents?.(b.events, b);
+  }
+
+  /** The relay wants our state; sent at the next turn boundary. */
+  requestState(req: number): void {
+    this.stateReq = req;
+  }
+
+  addMessage(text: string, tone: HudMessage['tone'] = 'info'): void {
+    this.messages.push({ id: performance.now() * 1000 + this.messages.length, text, tone, at: performance.now() });
+  }
+
+  get multiplayer(): boolean {
+    return !!this.opts.send;
+  }
+
+  togglePause(): void {
+    if (this.clock) this.setPaused(!this.clock.paused);
+    else this.opts.pause?.(!this.remotePaused);
+  }
+
+  ping(x: number, y: number): void {
+    if (this.opts.ping) this.opts.ping(x, y);
+    else this.renderer?.addPing(x, y, '#ffe680');
   }
 
   recentMessages(): HudMessage[] {

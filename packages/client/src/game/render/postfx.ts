@@ -15,19 +15,28 @@ import {
   ToneMappingMode,
   VignetteEffect,
 } from 'postprocessing';
-import type { Quality } from './quality';
+import type { BlurLevel, Quality } from './quality';
 
 export class PostFX {
   readonly composer: EffectComposer;
   private tilt: TiltShiftEffect | null = null;
+  /** Focus band size before zoom adjustments: wider means less of the screen is blurred. */
+  readonly baseArea: number;
 
-  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, q: Quality) {
+  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, q: Quality, blur: BlurLevel) {
+    this.baseArea = blur === 'strong' ? 0.45 : 0.68;
     this.composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
     this.composer.addPass(new RenderPass(scene, camera));
     const effects = [];
     if (q.bloom) effects.push(new BloomEffect({ luminanceThreshold: 0.82, luminanceSmoothing: 0.25, intensity: 0.9, mipmapBlur: true, radius: 0.7 }));
-    if (q.tiltShift) {
-      this.tilt = new TiltShiftEffect({ offset: 0.05, focusArea: 0.48, feather: 0.32, kernelSize: KernelSize.MEDIUM, resolutionScale: 0.5 });
+    if (q.tiltShift && blur !== 'off') {
+      this.tilt = new TiltShiftEffect({
+        offset: 0.05,
+        focusArea: this.baseArea,
+        feather: blur === 'strong' ? 0.32 : 0.42,
+        kernelSize: blur === 'strong' ? KernelSize.MEDIUM : KernelSize.VERY_SMALL,
+        resolutionScale: 0.5,
+      });
       effects.push(this.tilt);
     }
     effects.push(new HueSaturationEffect({ saturation: 0.12, hue: 0 }));

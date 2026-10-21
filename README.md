@@ -15,6 +15,16 @@ Up to four friends command ancient armies from **Rome, Greece, Carthage, Persia 
 
 Open the game link, enter a name, then either **Host** (you get a room code to share) or **Join** with a friend's code. **Solo** runs entirely in your browser.
 
+## Play together
+
+1. One of you clicks **Host a game** and shares the room code, or the invite link (`…/#join=ABCD`).
+2. Everyone else clicks **Join a game** and types the code.
+3. In the room, each of you picks an army to lead as **General**, or a detachment to **Command** under someone else's General. The AI fills every empty place.
+4. The host picks the battle and the rules and presses **Start**.
+5. If your connection drops, reload the page: you come back as the same player, and the AI looks after your troops until then.
+
+Not enough friends tonight? `npm run bots -- ABCD 2` adds two bot players to room ABCD.
+
 ## Develop
 
 You need Node.js 22 or newer.

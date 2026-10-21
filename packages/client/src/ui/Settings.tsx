@@ -35,6 +35,16 @@ export function Settings({ back }: { back: () => void }) {
           </div>
         </section>
         <section>
+          <div className="dim">Miniature blur at the top and bottom of the screen.</div>
+          <div className="row">
+            {(['off', 'light', 'strong'] as const).map((b) => (
+              <button key={b} className={`ff-btn small ${(g.blur ?? 'light') === b ? 'on' : ''}`} onClick={() => set({ blur: b })}>
+                {b === 'off' ? 'Off' : b === 'light' ? 'Light' : 'Strong'}
+              </button>
+            ))}
+          </div>
+        </section>
+        <section>
           <div className="dim">Pixel size: bigger pixels look chunkier and run faster.</div>
           <div className="row">
             {[1, 2, 3].map((n) => (

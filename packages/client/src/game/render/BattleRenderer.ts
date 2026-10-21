@@ -166,7 +166,7 @@ export class BattleRenderer {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
 
-    if (q.bloom || q.tiltShift || q.vignette) this.post = new PostFX(this.renderer, this.scene, this.rig.camera, q);
+    if (q.bloom || q.tiltShift || q.vignette) this.post = new PostFX(this.renderer, this.scene, this.rig.camera, q, graphics.blur ?? 'light');
     this.resize();
   }
 
@@ -457,8 +457,11 @@ export class BattleRenderer {
     this.drawOverlays();
     if (this.frame % 2 === 0) this.drawBanners();
 
-    // Tilt-shift focus: centre of the screen, tighter when close.
-    this.post?.focus(this.possessed ? -0.05 : 0.04, this.possessed ? 0.36 : 0.42 + rig.zoomT() * 0.25);
+    // Tilt-shift focus: centre of the screen; the band widens as the camera pulls back.
+    if (this.post) {
+      const base = this.post.baseArea;
+      this.post.focus(this.possessed ? -0.03 : 0.04, Math.min(0.95, (this.possessed ? base - 0.06 : base) + rig.zoomT() * 0.25));
+    }
     if (this.post) this.post.render(dt);
     else this.renderer.render(this.scene, cam);
   }

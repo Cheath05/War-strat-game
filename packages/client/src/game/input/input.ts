@@ -209,7 +209,10 @@ export class BattleInput {
   // --- Keyboard -------------------------------------------------------------------------
 
   private onKey = (e: KeyboardEvent): void => {
-    if ((e.target as HTMLElement)?.closest?.('input, textarea')) return;
+    if ((e.target as HTMLElement)?.closest?.('input, textarea')) {
+      this.keys.clear();
+      return;
+    }
     const k = e.key.toLowerCase();
     this.keys.add(k);
     const poss = this.possessing();
@@ -279,11 +282,11 @@ export class BattleInput {
         return;
       case ' ':
         e.preventDefault();
-        if (this.s.clock) this.s.setPaused(!this.s.clock.paused);
+        this.s.togglePause();
         return;
       case 'v': {
         const g = this.r.ground(this.mouse.x, this.mouse.y);
-        if (g) this.r.addPing(g.x, g.y, '#ffe680');
+        if (g) this.s.ping(Math.round(g.x * 10) / 10, Math.round(g.y * 10) / 10);
         return;
       }
       case 'a':

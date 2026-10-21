@@ -73,6 +73,8 @@ export interface HudState {
   messages: HudMessage[];
   possessed: { unit: number; name: string; hp: number; maxHp: number; hold: boolean } | null;
   paused: boolean;
+  pausedBy: string;
+  multiplayer: boolean;
   fps: number;
   backlog: number;
   orderMode: string;
@@ -97,6 +99,8 @@ export function emptyHud(): HudState {
     messages: [],
     possessed: null,
     paused: false,
+    pausedBy: '',
+    multiplayer: false,
     fps: 0,
     backlog: 0,
     orderMode: '',
@@ -217,7 +221,9 @@ export function buildHud(s: GameSession): HudState {
     selected: [...(s.renderer?.selected ?? [])],
     messages: s.recentMessages(),
     possessed,
-    paused: !!s.clock?.paused,
+    paused: !!s.clock?.paused || s.remotePaused,
+    pausedBy: s.pausedBy,
+    multiplayer: s.multiplayer,
     fps: s.fps,
     backlog: s.driver.backlog,
     orderMode: s.input?.orderMode ?? '',

@@ -47,6 +47,34 @@
   - **Captains** fire at will, skirmish, brace and fight back.
 - **Speed:** about 0.45 ms per tick for 760 soldiers and 1.1 ms for 1,500 on this Mac (`npm run battle`).
 
+## The relay (`packages/net`)
+
+**`RoomCore`** is one game room. The Node host (`packages/server`) and the Cloudflare Durable Object (`packages/worker`) both drive it.
+
+**In the lobby,** it owns who leads which army (General or Commander), the scenario and the rules.
+
+**When the host starts,** it broadcasts a `BattleSetup`. Every client builds the identical world from it.
+
+**During the battle,** a 100 ms timer broadcasts `turn {n, c}`. The commands are tagged with the sender's player id, and `c` is left out when there are none.
+
+**`LockstepDriver`** is the client side:
+- It buffers turns.
+- It simulates tick `t` only once turn `floor(t / 2)` has arrived.
+- It catches up quickly when behind (for example, after the browser tab was in the background).
+- It reports a hash every 20 ticks.
+
+**Hash checks.** Once every connected player has reported a tick:
+- If all the hashes agree, nothing happens.
+- Otherwise the majority wins (the host's version on a tie), and the relay sends `stateReq` to a healthy player.
+- That player answers at the next turn boundary with its serialised world.
+- The relay forwards it as `resync`, then replays every turn since then, empty ones included, so the receiver's turn numbers have no gaps.
+
+**Reconnect and late join** use the same path. The browser keeps a room token in `sessionStorage`, so a reload or dropped connection comes back as the same player. While they're gone, a `sys leave` command (inside a turn, so every computer applies it at the same tick) hands their troops to the AI. `sys join` gives them back.
+
+**Testing.**
+- `packages/net/test/lockstep.test.ts` runs four clients against `RoomCore` over a fake network with lag, jitter and ordered delivery. It checks that every hash agrees, that a deliberately corrupted world gets repaired, and that a dropped player rejoins in step.
+- `npm run bots -- ABCD 2` adds bot players to a real room.
+
 ## Determinism rules
 
 See CLAUDE.md. `npm run check:det` scans the sim for banned APIs.

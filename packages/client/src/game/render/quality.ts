@@ -23,8 +23,12 @@ export const QUALITY: Record<QualityName, Quality> = {
   ultra: { name: 'ultra', shadows: true, shadowMap: 4096, spriteShadows: true, bloom: true, tiltShift: true, vignette: true, particles: 4000, ambientMotes: true },
 };
 
+export type BlurLevel = 'off' | 'light' | 'strong';
+
 export interface GraphicsSettings {
   quality: QualityName;
+  /** Tilt-shift (miniature) blur at the top and bottom of the screen. */
+  blur: BlurLevel;
   /** 1 = native, 2 = chunky pixels (half resolution), 3 = very chunky. */
   pixelSize: number;
   showFps: boolean;
@@ -63,5 +67,5 @@ export function defaultGraphics(): GraphicsSettings {
   } catch {
     // keep medium
   }
-  return { quality, pixelSize: 1, showFps: false };
+  return { quality, blur: 'light', pixelSize: 1, showFps: false };
 }

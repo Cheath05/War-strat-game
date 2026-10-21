@@ -21,9 +21,22 @@ const DET_ORDERS: DetOrder['k'][] = ['hold', 'advance', 'attack', 'flankL', 'fla
 
 const fmt = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function Hud({ session, exit }: { session: GameSession; exit: () => void }) {
+export function Hud({ session, exit, resultExit, chat }: { session: GameSession; exit: () => void; resultExit?: () => void; chat?: (text: string) => void }) {
   const h = useStore(session.hud, (s) => s);
   const [menu, setMenu] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const [line, setLine] = useState('');
+  useEffect(() => {
+    if (!chat) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Enter' && !typing && !(e.target as HTMLElement)?.closest?.('input')) {
+        e.preventDefault();
+        setTyping(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [chat, typing]);
   const showFps = loadGraphics().showFps;
   if (!h.ok) return null;
   const myColor = h.sides[h.mySide]?.color ?? '#fff';
@@ -45,7 +58,7 @@ export function Hud({ session, exit }: { session: GameSession; exit: () => void 
         </div>
       </div>
       <div className="hud-menu pl-hud-block">
-        {h.paused && <span className="ff-window" style={{ padding: '4px 10px' }}>Paused</span>}
+        {h.paused && <span className="ff-window" style={{ padding: '4px 10px' }}>Paused{h.pausedBy ? ` by ${h.pausedBy}` : ''}</span>}
         <button className="ff-btn small" onClick={() => setMenu(true)}>
           Menu
         </button>
@@ -109,13 +122,37 @@ export function Hud({ session, exit }: { session: GameSession; exit: () => void 
         </div>
       )}
       <Minimap session={session} />
+      {typing && chat && (
+        <div className="ff-window pl-hud-block" style={{ position: 'absolute', left: 220, bottom: 150, width: 420, padding: 6 }}>
+          <input
+            className="ff-input"
+            autoFocus
+            style={{ width: '100%' }}
+            value={line}
+            maxLength={200}
+            placeholder="Say to everyone… (Enter to send, Esc to cancel)"
+            onChange={(e) => setLine(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') {
+                if (line.trim()) chat(line.trim());
+                setLine('');
+                setTyping(false);
+              } else if (e.key === 'Escape') {
+                setLine('');
+                setTyping(false);
+              }
+            }}
+          />
+        </div>
+      )}
       {selectedUnits.length > 0 && !h.possessed && <OrdersPanel session={session} units={selectedUnits} />}
       <div className="hud-bottom pl-hud-block">
         {h.dets.map((d) => (
           <DetPanel key={d.id} d={d} session={session} color={myColor} isGeneral={h.role === 'general'} />
         ))}
       </div>
-      {h.result && <Result session={session} exit={exit} />}
+      {h.result && <Result session={session} exit={exit} resultExit={resultExit} />}
       {menu && (
         <div className="overlay pl-hud-block" onClick={() => setMenu(false)}>
           <div className="ff-window col" style={{ minWidth: 260 }} onClick={(e) => e.stopPropagation()}>
@@ -123,13 +160,11 @@ export function Hud({ session, exit }: { session: GameSession; exit: () => void 
             <button className="ff-btn" onClick={() => setMenu(false)}>
               Resume
             </button>
-            {session.clock && (
-              <button className="ff-btn" onClick={() => session.setPaused(!h.paused)}>
-                {h.paused ? 'Unpause' : 'Pause'}
-              </button>
-            )}
+            <button className="ff-btn" onClick={() => session.togglePause()}>
+              {h.paused ? 'Unpause' : 'Pause'}
+            </button>
             <button className="ff-btn" onClick={exit}>
-              Leave battle
+              {session.multiplayer ? 'Leave the room' : 'Leave battle'}
             </button>
           </div>
         </div>
@@ -269,7 +304,7 @@ function OrdersPanel({ session, units }: { session: GameSession; units: UnitCard
   );
 }
 
-function Result({ session, exit }: { session: GameSession; exit: () => void }) {
+function Result({ session, exit, resultExit }: { session: GameSession; exit: () => void; resultExit?: () => void }) {
   const h = useStore(session.hud, (s) => s);
   const b = session.battle;
   const r = h.result!;
@@ -300,9 +335,22 @@ function Result({ session, exit }: { session: GameSession; exit: () => void }) {
           </div>
         )}
         <div className="row" style={{ justifyContent: 'center' }}>
-          <button className="ff-btn" onClick={exit}>
-            Back to the menu
-          </button>
+          {!session.multiplayer && (
+            <button className="ff-btn" onClick={exit}>
+              Back to the menu
+            </button>
+          )}
+          {session.multiplayer && resultExit && (
+            <button className="ff-btn" onClick={resultExit}>
+              Back to the lobby
+            </button>
+          )}
+          {session.multiplayer && !resultExit && <span className="dim">Waiting for the host to return to the lobby…</span>}
+          {session.multiplayer && (
+            <button className="ff-btn" onClick={exit}>
+              Leave the room
+            </button>
+          )}
         </div>
       </div>
     </div>
