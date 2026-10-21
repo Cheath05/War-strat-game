@@ -1,0 +1,10 @@
+{
+  "name": "@pl/sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic battle simulation: identical on every player's computer",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

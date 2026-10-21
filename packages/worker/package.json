@@ -1,0 +1,19 @@
+{
+  "name": "@pl/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The public link: a Cloudflare Worker serving the built client, with one Durable Object per game room running RoomCore",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@pl/net": "*",
+    "@pl/sim": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261003.1",
+    "wrangler": "4.147.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@pl/net",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Wire protocol, the lockstep relay (RoomCore) and the client-side lockstep driver",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pl/sim": "*"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@pl/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Node host for development and LAN games: WebSocket relay plus the built client",
+  "scripts": {
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@pl/net": "*",
+    "@pl/sim": "*",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2"
+  }
+}
