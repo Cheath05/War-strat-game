@@ -737,6 +737,13 @@ section > .label:first-child::after {
 .rule-row > .row {
   gap: 6px;
 }
+.rule-desc {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  max-width: 62ch;
+}
 
 /* Both sides of a battle, and the armies on each. */
 .sides {

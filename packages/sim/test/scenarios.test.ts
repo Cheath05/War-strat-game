@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Battle, FACTIONS, TICK_HZ, armyCost, defaultArmy, defaultSettings, groupDets, scenarioChoices, scenarioDef, validArmy } from '../src';
+import { Battle, FACTIONS, TICK_HZ, armyCost, defaultArmy, defaultSettings, groupDets, recruitedArmy, scenarioChoices, scenarioDef, validArmy } from '../src';
 import { passableAt } from '../src/map/mapgen';
 import { moveMask } from '../src/units/movement';
 
@@ -135,5 +135,26 @@ describe('Allied generals', () => {
     const now = centre(0, ally.id);
     expect(Math.hypot(now.x - x, now.y - y)).toBeLessThan(25);
     expect(ally.ai.plan).toBe('defend');
+  });
+});
+
+describe('Sandbox', () => {
+  it('builds any line-up on any ground, with armies of any units', () => {
+    const options = { map: 'desert', a1: 'rome', a2: 'greece', b1: 'persia', b2: 'none', b3: 'carthage' };
+    const sc = scenarioDef('sandbox', options);
+    const units = ['greece.blackspartans', 'carthage.elephants', 'rome.hastati'];
+    const army = recruitedArmy(sc, 'a1', units)!;
+    const b = Battle.create({ seed: 2, scenario: 'sandbox', options, armies: [army], settings: defaultSettings(), players: [] });
+    const w = b.world;
+    expect(b.map.name).toBe('Desert');
+    expect(w.armies.map((a) => `${a.faction}:${a.side}`)).toEqual(['rome:0', 'greece:0', 'persia:1', 'carthage:1']);
+    const mine = w.units.filter((u) => u.army === w.armies[0]!.id && u.id !== w.armies[0]!.genUnit).map((u) => u.type);
+    expect(mine.sort()).toEqual([...units].sort());
+    // No gold in a sandbox.
+    expect(w.armies.every((a) => a.gold === 0)).toBe(true);
+    for (const s of w.soldiers) expect(passableAt(b.map, s.x, s.y, moveMask(b.typeOf(b.unit(s.u)!)))).toBe(true);
+    // The armies march across and fight.
+    while (!w.result && w.tick < 180 * TICK_HZ) b.step([]);
+    expect(w.armies.reduce((n, a) => n + a.losses, 0)).toBeGreaterThan(0);
   });
 });

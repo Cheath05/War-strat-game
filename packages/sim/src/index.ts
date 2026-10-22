@@ -13,7 +13,8 @@ export { buildMap, heightAt, terrainAt, listMaps, type BattleMap, type MapScript
 export { T, TERRAIN, MOVE } from './map/terrain';
 export { findPath } from './map/pathfind';
 export { FACTIONS, faction, unitType, scenarioDef, scenarioChoices, budgetFor, listScenarios, hasUnitType } from './data/registry';
-export { armyCost, defaultArmy, groupDets, recruitable, roleOf, validArmy } from './economy/armies';
+export { allRecruitable, armyCost, defaultArmy, groupDets, recruitable, roleOf, validArmy, validSandboxArmy } from './economy/armies';
+export { slotKeys as sandboxSlots } from './data/scenarios/sandbox';
 export { TEAM_COLORS, type TeamColor } from './data/colors';
 export type * from './data/types';
 export { FORM, slotOffset, spacing } from './units/formation';

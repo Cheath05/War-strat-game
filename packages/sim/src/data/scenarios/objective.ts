@@ -1,6 +1,7 @@
 import { FACTIONS, faction } from '../registry';
 import { defaultArmy, groupDets } from '../../economy/armies';
 import type { ArmySlotDef, FactionDef, ScenarioDef } from '../types';
+import { mapChoice } from './blurbs';
 
 // Objective battles for co-op or PVP: Capture & Hold (victory points for holding three
 // points) and Defend the Bridge (the attackers must get across the river in time).
@@ -60,14 +61,10 @@ export const CAPTURE_HOLD: ScenarioDef = {
     {
       id: 'map',
       name: 'Battlefield',
-      choices: [
-        { id: 'plains', name: 'Open Plains' },
-        { id: 'river', name: 'The River Crossing' },
-        { id: 'hillfort', name: 'The Hill Fort' },
-      ],
+      choices: [mapChoice('plains', 'Open Plains'), mapChoice('river', 'The River Crossing'), mapChoice('hillfort', 'The Hill Fort')],
     },
-    { id: 'side0', name: 'First side', choices: factions },
-    { id: 'side1', name: 'Second side', choices: first('macedon') },
+    { id: 'side0', name: 'First side', desc: "The first side's country: its armies and the units they can recruit.", choices: factions },
+    { id: 'side1', name: 'Second side', desc: "The second side's country.", choices: first('macedon') },
   ],
   configure: captureHold,
 };
@@ -95,8 +92,8 @@ function bridge(c: Record<string, string>): ScenarioDef {
 export const BRIDGE: ScenarioDef = {
   ...bridge({}),
   options: [
-    { id: 'defenders', name: 'Defenders', choices: first('greece') },
-    { id: 'attackers', name: 'Attackers', choices: first('persia') },
+    { id: 'defenders', name: 'Defenders', desc: 'The country holding the far bank.', choices: first('greece') },
+    { id: 'attackers', name: 'Attackers', desc: 'The country that must force its way across.', choices: first('persia') },
   ],
   configure: bridge,
 };

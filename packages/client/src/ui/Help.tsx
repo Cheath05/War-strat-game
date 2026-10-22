@@ -87,6 +87,11 @@ export function Help({ back }: { back: () => void }) {
             <li>
               <b>Defend the Bridge:</b> the attackers need sixty men across the river, by the bridge or the fords, within fifteen minutes.
             </li>
+            <li>
+              <b>Sandbox:</b> make your own battle. Pick the ground, then up to four armies a side, each of any country, with any units from any country (super
+              units too), up to thirty an army and free. Rome and Greece against Persia? Elephants against Spartans? In a room, friends take an army and choose its
+              country and units; the host sets up the armies the AI leads.
+            </li>
           </ul>
           <h3>Gold</h3>
           <p>

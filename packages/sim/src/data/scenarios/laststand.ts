@@ -1,6 +1,7 @@
 import { FACTIONS, faction } from '../registry';
 import { defaultArmy, groupDets } from '../../economy/armies';
 import type { ArmySlotDef, ScenarioDef } from '../types';
+import { mapChoice } from './blurbs';
 
 /**
  * Last Stand: up to four armies hold a strong position against ever bigger waves. Gold
@@ -61,14 +62,10 @@ export const LAST_STAND: ScenarioDef = {
     {
       id: 'map',
       name: 'Battlefield',
-      choices: [
-        { id: 'hillfort', name: 'The Hill Camp' },
-        { id: 'river', name: 'The River Crossing' },
-        { id: 'pass', name: 'The Hot Gates' },
-      ],
+      choices: [mapChoice('hillfort', 'The Hill Camp'), mapChoice('river', 'The River Crossing'), mapChoice('pass', 'The Hot Gates')],
     },
-    { id: 'faction', name: 'Your faction', choices: factions },
-    { id: 'enemy', name: 'The enemy', choices: [...factions.filter((f) => f.id === 'carthage'), ...factions.filter((f) => f.id !== 'carthage')] },
+    { id: 'faction', name: 'Your faction', desc: 'The country your armies come from: it decides which units you can recruit.', choices: factions },
+    { id: 'enemy', name: 'The enemy', desc: 'The country the waves come from. Its super unit leads the last waves.', choices: [...factions.filter((f) => f.id === 'carthage'), ...factions.filter((f) => f.id !== 'carthage')] },
   ],
   configure,
 };

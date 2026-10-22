@@ -1,7 +1,7 @@
 // Army building for gold modes: what a list of units costs, grouping it into detachments,
 // and a balanced army for any faction and budget (the AI's, or a quick pick).
 
-import { faction, unitType } from '../data/registry';
+import { FACTIONS, faction, hasUnitType, unitType } from '../data/registry';
 import type { DetDef, UnitTypeDef } from '../data/types';
 
 export type UnitRole = 'line' | 'missile' | 'horse';
@@ -28,6 +28,16 @@ export function validArmy(fid: string, units: string[], gold: number, maxUnits: 
   if (units.length > maxUnits) return false;
   const ok = new Set(recruitable(fid).map((t) => t.id));
   return units.every((id) => ok.has(id)) && armyCost(units) <= gold;
+}
+
+/** Every unit any faction can recruit: sandbox armies mix them freely. */
+export function allRecruitable(): UnitTypeDef[] {
+  return FACTIONS.flatMap((f) => recruitable(f.id));
+}
+
+/** A sandbox army: any faction's units (not generals' guards), at most maxUnits, at no cost. */
+export function validSandboxArmy(units: string[], maxUnits: number): boolean {
+  return units.length <= maxUnits && units.every((id) => hasUnitType(id) && !unitType(id).general);
 }
 
 const DET_NAMES: Record<UnitRole, string[]> = {
