@@ -75,3 +75,65 @@ describe('Gold modes', () => {
     expect(w.sides[0]!.score + w.sides[1]!.score).toBeGreaterThan(0);
   });
 });
+
+describe('Allied generals', () => {
+  const setup = () => {
+    const b = Battle.create({
+      seed: 3,
+      scenario: 'laststand',
+      options: { map: 'pass' },
+      settings: defaultSettings(),
+      players: [{ id: 1, name: 'Alex', role: 'general', slot: 'ls1', det: 0 }],
+    });
+    b.step([{ p: 1, c: { k: 'ready', on: true } }]);
+    const w = b.world;
+    const ally = w.armies.find((a) => a.slot === 'ls2')!;
+    // Wait for the first enemies.
+    while (!w.units.some((u) => u.side === 1 && u.st !== 'gone') && w.tick < 120 * TICK_HZ) b.step([]);
+    const centre = (side: number, army?: number) => {
+      const us = w.units.filter((u) => u.side === side && u.st !== 'gone' && (army === undefined || u.army === army) && u.id !== b.army(u.army)!.genUnit);
+      let x = 0;
+      let y = 0;
+      for (const u of us) {
+        x += b.center(u).x;
+        y += b.center(u).y;
+      }
+      return { x: x / us.length, y: y / us.length };
+    };
+    return { b, w, ally, centre };
+  };
+
+  it('attacks when a general asks', () => {
+    const { b, w, ally, centre } = setup();
+    // How far the allied army has marched toward where the enemy was.
+    const start = centre(0, ally.id);
+    const foe = centre(1);
+    const dir = { x: foe.x - start.x, y: foe.y - start.y };
+    const dl = Math.hypot(dir.x, dir.y);
+    const advanced = () => {
+      const a = centre(0, ally.id);
+      return ((a.x - start.x) * dir.x + (a.y - start.y) * dir.y) / dl;
+    };
+    // Only allied AI armies take the order: not your own, nor the enemy's.
+    const enemy = w.armies.find((a) => a.side === 1)!;
+    b.step([{ p: 1, c: { k: 'ally', a: enemy.id, o: 'assault' } }, { p: 1, c: { k: 'ally', a: w.armies[0]!.id, o: 'assault' } }]);
+    expect(enemy.ai.cmd).toBe('');
+    expect(w.armies[0]!.ai.cmd).toBe('');
+    b.step([{ p: 1, c: { k: 'ally', a: ally.id, o: 'assault' } }]);
+    expect(ally.ai.plan).toBe('assault');
+    for (let t = 0; t < 40 * TICK_HZ; t++) b.step([]);
+    expect(advanced()).toBeGreaterThan(40);
+  });
+
+  it('holds the place a general picks', () => {
+    const { b, ally, centre } = setup();
+    const c = centre(0, ally.id);
+    const x = c.x;
+    const y = c.y + (c.y > b.map.hm / 2 ? -40 : 40);
+    b.step([{ p: 1, c: { k: 'ally', a: ally.id, o: 'hold', x, y } }]);
+    for (let t = 0; t < 50 * TICK_HZ; t++) b.step([]);
+    const now = centre(0, ally.id);
+    expect(Math.hypot(now.x - x, now.y - y)).toBeLessThan(25);
+    expect(ally.ai.plan).toBe('defend');
+  });
+});

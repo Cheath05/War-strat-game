@@ -4,7 +4,7 @@
 // setting swaps them. Below, "left" and "right" mean the select and command buttons. In
 // possession, WASD steers the officer and hotkeys command his men.
 
-import { spacing, type DetOrder, type FormationKind, type Unit } from '@pl/sim';
+import { ORDER_NAMES, spacing, type AllyPlan, type DetOrder, type FormationKind, type Unit } from '@pl/sim';
 import { ui } from '../../audio/sfx';
 import type { BattleRenderer, FormationGhost } from '../render/BattleRenderer';
 import type { GameSession } from '../session';
@@ -34,6 +34,9 @@ export class BattleInput {
   private avatarSent = { mx: 0, my: 0, run: false, ax: 0, ay: 0, at: 0 };
   /** A detachment order waiting for its target click. */
   pendingDet: { det: number; k: DetOrder['k'] } | null = null;
+  /** An allied general's plan waiting for the place to defend or hold. */
+  pendingAlly: { a: number; o: AllyPlan } | null = null;
+  /** What the waiting click is for, shown in the HUD. */
   orderMode = '';
 
   constructor(
@@ -141,7 +144,7 @@ export class BattleInput {
         });
       }
     }
-    if (this.rightDown && !this.possessing() && !this.pendingDet) {
+    if (this.rightDown && !this.possessing() && !this.awaitingClick()) {
       const g = this.r.ground(p.x, p.y);
       if (g && Math.hypot(g.x - this.rightDown.gx, g.y - this.rightDown.gy) > 3) {
         this.r.ghosts = this.layout(this.selectedUnits(), this.rightDown.gx, this.rightDown.gy, g.x, g.y).map(toGhost(this.b));
@@ -152,17 +155,15 @@ export class BattleInput {
   private onUp = (e: PointerEvent): void => {
     const p = this.local(e);
     const b = this.role(e.button);
-    if (this.pendingDet && ((b === 0 && this.leftDown) || (b === 2 && this.rightDown))) {
-      // A detachment order's target: left click places it and right click cancels, whichever
-      // button selects.
+    if (this.awaitingClick() && ((b === 0 && this.leftDown) || (b === 2 && this.rightDown))) {
+      // The place for a detachment or ally order: left click picks it and right click
+      // cancels, whichever button selects.
       this.leftDown = this.rightDown = null;
       this.box.style.display = 'none';
       this.r.ghosts = [];
-      if (e.button === 0) this.finishDetOrder(p.x, p.y);
-      else {
-        this.pendingDet = null;
-        this.orderMode = '';
-      }
+      if (e.button !== 0) this.cancelClick();
+      else if (this.pendingDet) this.finishDetOrder(p.x, p.y);
+      else this.finishAlly(p.x, p.y);
       return;
     }
     if (b === 0 && this.leftDown) {
@@ -269,10 +270,8 @@ export class BattleInput {
     }
     switch (k) {
       case 'escape':
-        if (this.pendingDet) {
-          this.pendingDet = null;
-          this.orderMode = '';
-        } else this.r.selected.clear();
+        if (this.awaitingClick()) this.cancelClick();
+        else this.r.selected.clear();
         return;
       case 'backspace':
       case 'h':
@@ -347,13 +346,44 @@ export class BattleInput {
   /** Starts a detachment order; orders that need a place wait for a click on the map. */
   detOrder(det: number, k: DetOrder['k']): void {
     if (DET_NEEDS_POINT.includes(k)) {
+      this.cancelClick();
       this.pendingDet = { det, k };
-      this.orderMode = k;
+      this.orderMode = ORDER_NAMES[k];
       return;
     }
     const d = this.b.detachment(det);
     const c = d ? this.b.center(this.b.unit(d.units[0]!)!) : { x: 0, y: 0 };
     this.s.issue({ k: 'det', d: det, o: k, x: c.x, y: c.y });
+  }
+
+  /** Asks an allied AI general for a plan; defending or holding waits for a click on the place. */
+  allyOrder(army: number, o: AllyPlan): void {
+    this.cancelClick();
+    if (o === 'defend' || o === 'hold') {
+      this.pendingAlly = { a: army, o };
+      this.orderMode = `${this.b.army(army)?.name ?? 'Ally'}: ${o === 'defend' ? 'defend' : 'hold'} here`;
+      return;
+    }
+    this.s.issue({ k: 'ally', a: army, o });
+  }
+
+  private finishAlly(px: number, py: number): void {
+    const pa = this.pendingAlly!;
+    this.cancelClick();
+    const g = this.r.ground(px, py);
+    if (!g) return;
+    this.s.issue({ k: 'ally', a: pa.a, o: pa.o, x: g.x, y: g.y });
+    this.r.addPing(g.x, g.y, '#8fc4ff');
+  }
+
+  private awaitingClick(): boolean {
+    return !!(this.pendingDet || this.pendingAlly);
+  }
+
+  private cancelClick(): void {
+    this.pendingDet = null;
+    this.pendingAlly = null;
+    this.orderMode = '';
   }
 
   private finishDetOrder(px: number, py: number): void {

@@ -1,8 +1,8 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { ORDER_NAMES, TEAM_COLORS, recruitable, unitType, type DetOrder, type FormationKind } from '@pl/sim';
+import { ORDER_NAMES, TEAM_COLORS, recruitable, unitType, type AllyPlan, type DetOrder, type FormationKind } from '@pl/sim';
 import { useStore } from '../app/store';
 import type { GameSession } from '../game/session';
-import type { DetCard, UnitCard } from '../game/hud';
+import type { AllyCard, DetCard, UnitCard } from '../game/hud';
 import { UnitIcon } from './UnitIcon';
 import { Minimap } from './Minimap';
 import { loadGraphics } from '../game/render/quality';
@@ -109,7 +109,7 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
       )}
       {h.orderMode && (
         <div className="panel hud-banner order-hint">
-          Click on the map: {ORDER_NAMES[h.orderMode as DetOrder['k']]} <span className="dim">(right click to cancel)</span>
+          Click on the map: {h.orderMode} <span className="dim">(right click to cancel)</span>
         </div>
       )}
       {h.possessed && (
@@ -143,7 +143,12 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
           </div>
         </div>
       )}
-      {h.goldMode && h.phase === 'battle' && <GoldBox session={session} />}
+      {h.phase === 'battle' && (h.goldMode || h.allies.length > 0) && (
+        <div className="hud-left">
+          {h.goldMode && <GoldBox session={session} />}
+          {h.allies.length > 0 && <Allies session={session} allies={h.allies} />}
+        </div>
+      )}
       <Minimap session={session} />
       {typing && chat && (
         <div className="panel chat-line pl-hud-block">
@@ -307,6 +312,46 @@ function Card({ u, session, color }: { u: UnitCard; session: GameSession; color:
 }
 
 /** Gold and reinforcements (gold modes): new units march in from our map edge. */
+const ALLY_ORDERS: { o: AllyPlan; label: string; title: string }[] = [
+  { o: 'assault', label: 'Attack', title: 'March on the enemy and attack' },
+  { o: 'defend', label: 'Defend', title: 'Click a place: they stand there and strike at enemies who come near' },
+  { o: 'hold', label: 'Hold', title: 'Click a place: they hold that ground and stay put' },
+  { o: 'auto', label: 'Own plan', title: 'Let them fight to their own plan' },
+];
+
+/** The AI generals on our side, and the plan to ask each of them for. */
+function Allies({ session, allies }: { session: GameSession; allies: AllyCard[] }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="panel allies pl-hud-block">
+      <button className="allies-head" onClick={() => setOpen(!open)} title={open ? 'Hide' : 'Show'}>
+        <span className="label">Allied generals</span>
+        <span className="dim">{open ? '−' : '+'}</span>
+      </button>
+      {open &&
+        allies.map((a) => (
+          <div key={a.id} className="ally-row">
+            <div className="ally-name" title={a.title}>
+              {a.name} <span className="dim">· {a.plan}</span>
+            </div>
+            <div className="row" style={{ gap: 4 }}>
+              {ALLY_ORDERS.map((k) => (
+                <button
+                  key={k.o}
+                  className={`btn small ${a.cmd === k.o || (k.o === 'auto' && !a.cmd) ? 'on' : ''}`}
+                  title={k.title}
+                  onClick={() => session.input?.allyOrder(a.id, k.o)}
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+}
+
 function GoldBox({ session }: { session: GameSession }) {
   const h = useStore(session.hud, (s) => s);
   const [open, setOpen] = useState(false);

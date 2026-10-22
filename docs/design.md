@@ -15,6 +15,7 @@ This is the living design: it starts as the approved v1 design in [plans/v1.md](
   - Hold here, Advance to, Attack target;
   - Flank left / Flank right;
   - Skirmish, Reserve (plug gaps), Guard the General, Fall back.
+- **Allied AI generals.** A General can ask an AI-led army on their side for a plan from the "Allied generals" panel: Attack, Defend a place (hold it and strike at enemies who come near), Hold a place (stay put), or Own plan. The AI keeps to the plan until asked for another.
 - **Human Commanders.** When their General gives an order, it appears on their map as a marker, an arrow and a message, but they decide how to carry it out. Everyone can ping the map ("attack here", "help!").
 - **Take command (possession).** Press P, or double-click a captain; Tab takes you back.
   - **Controls:** WASD to move, Shift to run, aim with the mouse, Space to charge, F to change formation, R for a rally shout, Q to fire a volley at the cursor, E to brace/hold.

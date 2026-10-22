@@ -1421,10 +1421,42 @@ section > .label:first-child::after {
 }
 
 /* Gold and reinforcements during battle (gold modes). */
-.gold-box {
+.hud-left {
   position: absolute;
   top: 52px;
   left: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: calc(100vw - 20px);
+}
+.allies {
+  padding: 8px 10px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.allies-head {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.allies-head .label {
+  margin: 0;
+}
+.ally-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ally-name {
+  white-space: nowrap;
+}
+.gold-box {
   max-height: 60vh;
   overflow: auto;
   padding: 8px 10px;

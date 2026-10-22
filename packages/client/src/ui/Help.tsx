@@ -43,6 +43,10 @@ export function Help({ back }: { back: () => void }) {
               Camera: <span className="kbd">W A S D</span> pan, <span className="kbd">Q</span>/<span className="kbd">E</span> rotate, mouse wheel zoom,{' '}
               <span className="kbd">Home</span> your general, <span className="kbd">Space</span> pause (solo).
             </li>
+            <li>
+              <b>Allied generals</b> (top left): ask an AI-led army on your side to <b>Attack</b>, <b>Defend</b> a place (click it; they stand there and strike at
+              enemies who come near), <b>Hold</b> a place (they stay put), or fight to their <b>Own plan</b>.
+            </li>
           </ul>
           <h3>Leading in person</h3>
           <p>

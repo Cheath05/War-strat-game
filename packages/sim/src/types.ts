@@ -95,6 +95,12 @@ export interface Unit {
   order: UnitOrder;
   /** Remaining path waypoints, flattened [x0, y0, x1, y1, ...]. */
   path: number[];
+  /**
+   * Where the anchor has walked, newest first, flattened [x0, y0, ...], about 1 m apart and
+   * as long as the unit is deep: a column follows it through gaps, and men cut off from
+   * their place by a wall follow it round.
+   */
+  trail: number[];
   st: UnitState;
   morale: number;
   /** Fatigue 0..100. */
@@ -179,6 +185,12 @@ export interface ArmyAI {
   /** Fixed roles per detachment id, assigned once. */
   roles: Record<string, string>;
   since: number;
+  /**
+   * A plan an allied human general asked for ('assault', 'defend', 'hold'; '' for the AI's own
+   * judgement), which the AI keeps to, and for defend and hold the place to stand ([x, y]).
+   */
+  cmd: string;
+  at: number[];
 }
 
 export interface Army {

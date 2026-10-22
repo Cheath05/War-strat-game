@@ -65,6 +65,7 @@ export function hashWorld(w: World): number {
     h.int(a.id);
     h.int(a.ai.stage);
     h.str(a.ai.plan);
+    h.str(a.ai.cmd);
     h.int(a.shock);
   }
   for (const d of w.dets) {
