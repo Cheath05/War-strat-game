@@ -211,7 +211,7 @@ function think(b: Battle, a: Army): void {
     }
   }
 
-  generalUnit(b, a, own, C, fx, fy);
+  generalUnit(b, a, own, C, E, fx, fy);
 }
 
 /** Capture & Hold: take the points we don't own, then guard the ones we do. */
@@ -292,12 +292,25 @@ function marchRoute(b: Battle, a: Army, dets: Detachment[], name: string): void 
 }
 
 /** Keeps the general behind the line, out of trouble, and uses his abilities. */
-function generalUnit(b: Battle, a: Army, own: Unit[], C: { x: number; y: number }, fx: number, fy: number): void {
+function generalUnit(b: Battle, a: Army, own: Unit[], C: { x: number; y: number }, E: { x: number; y: number }, fx: number, fy: number): void {
   const gu = b.unit(a.genUnit);
   if (!fighting(gu) || gu.possBy) return;
   const gd = b.detachment(gu.det);
   const g = b.soldier(gu.cap);
   if (!g || !gd) return;
+  // His army is gone: he backs up the nearest allied army instead (rather than backing away
+  // from the enemy into a corner), or, with no friends left, leads his guard in a last charge.
+  if (own.every((u) => u.id === gu.id)) {
+    const friends = b.world.units.filter((u) => u.side === a.side && u.army !== a.id && fighting(u) && b.army(u.army)?.genUnit !== u.id);
+    const F = centroid(b, friends);
+    if (!F) {
+      const foe = nearestEnemy(b, g.x, g.y, a.side, 1e9, (o) => o.st !== 'routing');
+      if (foe) setOrder(b, gd, 'attack', b.center(foe).x, b.center(foe).y, foe.id);
+      return;
+    }
+    C = F;
+    [fx, fy] = norm(E.x - F.x, E.y - F.y, fx, fy);
+  }
   // Behind the centre of the army, but never closer than 55 m to a fighting enemy.
   let gx = C.x - fx * 35;
   let gy = C.y - fy * 35;

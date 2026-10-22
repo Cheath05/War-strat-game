@@ -88,7 +88,7 @@ export class BattleInput {
     const out: Unit[] = [];
     for (const id of this.r.selected) {
       const u = this.b.unit(id);
-      if (u && u.st !== 'gone' && this.s.mine(u)) out.push(u);
+      if (u && u.st !== 'gone' && this.s.placeable(u)) out.push(u);
     }
     return out;
   }
@@ -172,14 +172,14 @@ export class BattleInput {
       this.box.style.display = 'none';
       if (this.possessing()) return;
       if (Math.abs(p.x - start.x) + Math.abs(p.y - start.y) > 6) {
-        const units = this.r.unitsInRect(start.x, start.y, p.x, p.y, (u) => this.s.mine(u));
+        const units = this.r.unitsInRect(start.x, start.y, p.x, p.y, (u) => this.s.placeable(u));
         this.select(
           units.map((u) => u.id),
           e.shiftKey,
         );
       } else {
         const u = this.r.pickUnit(p.x, p.y);
-        if (u && this.s.mine(u)) this.select([u.id], e.shiftKey || e.ctrlKey || e.metaKey);
+        if (u && this.s.placeable(u)) this.select([u.id], e.shiftKey || e.ctrlKey || e.metaKey);
         else if (!e.shiftKey) this.r.selected.clear();
       }
       return;

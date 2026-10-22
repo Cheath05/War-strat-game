@@ -7,7 +7,7 @@ export * from './types';
 export * from './events';
 export { Battle, type UnitCenter } from './battle';
 export { createWorld, defaultSettings, recruitedArmy, resolveArmies, slotSide, type BattleSetup, type PlayerSetup, type ArmySetup } from './setup';
-export { type AllyPlan, type Command, type TaggedCommand, controls, ORDER_NAMES } from './commands';
+export { type AllyPlan, type Command, type TaggedCommand, controls, placesForAi, ORDER_NAMES } from './commands';
 export { aiArmy } from './ai/util';
 export { buildMap, heightAt, terrainAt, listMaps, type BattleMap, type MapScript } from './map/mapgen';
 export { T, TERRAIN, MOVE } from './map/terrain';

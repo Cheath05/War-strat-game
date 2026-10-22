@@ -84,6 +84,9 @@ export interface HudState {
   auto: boolean;
   dets: DetCard[];
   allies: AllyCard[];
+  /** A sandbox: units deploy anywhere, and the host places the AI's armies too. */
+  sandbox: boolean;
+  host: boolean;
   selected: number[];
   messages: HudMessage[];
   possessed: { unit: number; name: string; hp: number; maxHp: number; hold: boolean } | null;
@@ -130,6 +133,8 @@ export function emptyHud(): HudState {
     auto: false,
     dets: [],
     allies: [],
+    sandbox: false,
+    host: false,
     selected: [],
     messages: [],
     possessed: null,
@@ -275,6 +280,8 @@ export function buildHud(s: GameSession): HudState {
     auto: !!me?.auto,
     dets,
     allies: me?.role === 'general' && myArmy ? allyCards(b, myArmy.id, myArmy.side) : [],
+    sandbox: !!b.scenario.sandbox,
+    host: !!me?.host,
     selected: [...(s.renderer?.selected ?? [])],
     messages: s.recentMessages(),
     possessed,

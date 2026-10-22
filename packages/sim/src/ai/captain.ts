@@ -1,7 +1,9 @@
 // Captain AI: every unit's own sense, whoever commands it. Missile units pick targets and
-// skirmishers dodge melee; spearmen brace against cavalry; idle units fight back when hit.
+// skirmishers dodge melee; spearmen brace against cavalry; idle units fight back when hit,
+// and go for the shooters (or close up in testudo) when they're under missile fire.
 
 import type { Battle } from '../battle';
+import { sec } from '../constants';
 import { dist, norm } from '../math/det';
 import type { Unit } from '../types';
 import { UF } from '../types';
@@ -92,6 +94,52 @@ function think(b: Battle, u: Unit): void {
   if (u.order.k === 'none' && u.engaged > 0 && !(u.flags & UF.guard)) {
     const foe = attackerOf(b, u);
     if (foe) orderAttack(b, u, foe.id, false, u.order.manual);
+  }
+  underFire(b, u, c);
+}
+
+/** Furthest a unit charges out at missile troops shooting at it, in metres. */
+const SALLY = 110;
+
+/**
+ * Shot at while standing with nobody to fight (guard mode keeps the place, as ordered): go for
+ * the shooters if we can catch them; foot under fire from horsemen closes up in testudo if it
+ * can. A chase that runs on too far is given up.
+ */
+function underFire(b: Battle, u: Unit, c: { x: number; y: number }): void {
+  const w = b.world;
+  const t = b.typeOf(u);
+  const shot = w.tick - u.hitT < sec(2) && u.engaged === 0;
+  if (u.flags & UF.cover && (w.tick - u.hitT > sec(6) || u.order.k !== 'none')) {
+    u.flags &= ~UF.cover;
+    u.form = u.baseForm;
+  }
+  if (u.order.k === 'attack') {
+    const tu = b.unit(u.order.target);
+    const tc = tu ? b.center(tu) : null;
+    if (tu && tc && isMissile(b, tu) && !u.engaged && !u.order.manual && dist(c.x, c.y, tc.x, tc.y) > SALLY * 1.4) u.order.k = 'none';
+    return;
+  }
+  if (!shot || u.order.k !== 'none' || u.flags & UF.guard) return;
+  // Who is shooting at us: the nearest missile unit aiming here.
+  let shooter: Unit | undefined;
+  let sd = 1e9;
+  for (const o of w.units) {
+    if (o.side === u.side || o.fireT !== u.id || !fighting(o)) continue;
+    const oc = b.center(o);
+    const d = dist(c.x, c.y, oc.x, oc.y);
+    if (d < sd) {
+      sd = d;
+      shooter = o;
+    }
+  }
+  if (!shooter) return;
+  const catchable = t.mounted || !b.typeOf(shooter).mounted;
+  if (catchable && sd <= SALLY) {
+    orderAttack(b, u, shooter.id, sd > 40, u.order.manual);
+  } else if (t.forms.includes('testudo') && u.form !== 'testudo') {
+    u.form = 'testudo';
+    u.flags |= UF.cover;
   }
 }
 

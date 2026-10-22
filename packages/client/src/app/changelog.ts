@@ -11,6 +11,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.1',
+    date: '22 October 2026',
+    title: 'Fighting back, and a free hand in the Sandbox',
+    items: [
+      'Sandbox deployment: place your units anywhere on the map, not just the golden zone. The host (or you, playing solo) can place the AI\'s armies too, and the battle waits until everyone is ready.',
+      'Units never start in water, marsh or walls, or on top of each other: each forms up on the nearest dry, open ground. Units you drop in a river form up on the bank.',
+      'Units under fire from archers, slingers or javelins no longer just stand there: they charge the shooters if they can catch them. Against horse archers, Romans close up in testudo until the arrows stop.',
+      'Guard mode (G) keeps a unit in place under fire, as ordered.',
+      'A general whose army has been destroyed no longer wanders off into a corner: he backs up the nearest friendly army, or leads his guard in a last charge.',
+    ],
+  },
+  {
     version: '1.5.0',
     date: '22 October 2026',
     title: 'The Sandbox',

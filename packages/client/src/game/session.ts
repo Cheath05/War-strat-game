@@ -2,7 +2,7 @@
 // renderer drawing it, the input turning clicks into commands, and the HUD snapshot that
 // React shows. Solo games get their turns from a local clock; multiplayer from the relay.
 
-import { Battle, TICK_HZ, TICKS_PER_TURN, controls, type Command, type PlayerState, type SimEvent, type TaggedCommand, type Unit } from '@pl/sim';
+import { Battle, TICK_HZ, TICKS_PER_TURN, controls, placesForAi, type Command, type PlayerState, type SimEvent, type TaggedCommand, type Unit } from '@pl/sim';
 import { FogOfWar } from './fog';
 import { FrameLimiter } from './frameLimit';
 import { music } from '../audio/music';
@@ -120,6 +120,12 @@ export class GameSession {
     return !!p && controls(this.battle, p, u);
   }
 
+  /** Units we may select and move: ours, and at a sandbox's deployment the AI's too if we host. */
+  placeable(u: Unit): boolean {
+    const p = this.me;
+    return !!p && (controls(this.battle, p, u) || placesForAi(this.battle, p, u));
+  }
+
   issue(cmd: Command): void {
     this.driver.issue(cmd);
     if (cmd.k === 'move' || cmd.k === 'attack' || cmd.k === 'det') ui('order');
@@ -218,7 +224,8 @@ export class GameSession {
     if (this.renderer && this.renderer.battle !== this.driver.battle) this.renderer.setBattle(this.driver.battle);
     if (this.renderer) {
       const me = this.me;
-      const army = me && this.battle.world.phase === 'deploy' ? this.battle.army(me.army) : undefined;
+      // The golden zone to deploy in (a sandbox lets you place units anywhere).
+      const army = me && this.battle.world.phase === 'deploy' && !this.battle.scenario.sandbox ? this.battle.army(me.army) : undefined;
       this.renderer.zone = army ? army.zone : null;
       this.updateFog(dt);
     }
