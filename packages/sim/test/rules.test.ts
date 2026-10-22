@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMap, findPath, MOVE, TERRAIN } from '../src';
+import { buildMap, findPath, MOVE, TERRAIN, spacing } from '../src';
 import { orderAttack, orderMove, setFormation } from '../src/commands';
 import { emptyBattle, place, run } from './helpers';
 
@@ -100,8 +100,9 @@ describe('maps and paths', () => {
 
   it('squeezes a wide unit into a column to pass the gap', () => {
     const b = emptyBattle({}, 3, 'gap');
-    const u = place(b, 0, 'rome.hastati', 60, 135, 0, -1, 24);
-    expect(u.width).toBeGreaterThan(6);
+    // Too many files abreast to fit through the 16 m gap.
+    const u = place(b, 0, 'rome.hastati', 60, 135, 0, -1, 80);
+    expect((u.width - 1) * spacing(b.typeOf(u), u.form)[0]).toBeGreaterThan(16);
     orderMove(b, u, 60, 25, 0, -1, 0, false, true);
     let narrowest = u.width;
     for (let t = 0; t < 20 * 150 && u.order.k === 'move'; t++) {
@@ -111,7 +112,9 @@ describe('maps and paths', () => {
     run(b, 5);
     const c = b.center(u);
     expect(c.y).toBeLessThan(60);
-    expect(narrowest).toBeLessThanOrEqual(6);
+    // Narrower than its block, and no wider than the 16 m gap (files measured across the front).
+    expect(narrowest).toBeLessThan(u.bw);
+    expect((narrowest - 1) * spacing(b.typeOf(u), u.form)[0]).toBeLessThanOrEqual(16);
     expect(u.width).toBe(u.bw);
   });
 });

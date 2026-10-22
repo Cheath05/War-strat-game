@@ -3,7 +3,7 @@
 
 import { TILE } from '../constants';
 import type { BattleMap } from './mapgen';
-import { WET_PENALTY, easyLine, lineCost, terrainAt } from './mapgen';
+import { WET_PENALTY, easyLine, hugCost, lineCost, terrainAt } from './mapgen';
 import { MOVE, TERRAIN } from './terrain';
 
 const SQRT2 = 1.4142135623730951;
@@ -198,7 +198,7 @@ export function findPath(map: BattleMap, sx: number, sy: number, gx: number, gy:
           if (!(map.pass[j * w + ni]! & mask) || !(map.pass[nj * w + i]! & mask)) continue;
         }
         const info = TERRAIN[map.ter[nk]!]!;
-        const step = ((di !== 0 && dj !== 0 ? SQRT2 : 1) * TILE) / (info.speed[ci]! * (info.wet ? WET_PENALTY : 1));
+        const step = ((di !== 0 && dj !== 0 ? SQRT2 : 1) * TILE * hugCost(map, nk)) / (info.speed[ci]! * (info.wet ? WET_PENALTY : 1));
         const ng = gk + step;
         if (s.stamp[nk] !== gen || ng < s.g[nk]!) {
           s.stamp[nk] = gen;

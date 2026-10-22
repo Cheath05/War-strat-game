@@ -2,7 +2,7 @@
 
 import type { ArmySetup, BattleSetup, Command, MapRef, Settings, TaggedCommand } from '@pl/sim';
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export interface LobbyPlayer {
   id: number;

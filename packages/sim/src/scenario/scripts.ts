@@ -93,14 +93,18 @@ function spawnWave(b: Battle, n: number): void {
   const budget = (1400 + 650 * (n - 1)) * ([0.7, 1, 1.25, 1.5][d] ?? 1) * (1 + 0.15 * Math.max(0, humans - 1));
   const groups = n >= 9 ? 3 : n >= 5 ? 2 : 1;
   const pal = w.armies.find((a) => a.side === 1)?.pal;
+  const champions = them.units.find((t) => t.elite);
   for (let k = 0; k < groups; k++) {
+    const units = defaultArmy(them.id, Math.floor(budget / groups), 14);
+    // The last waves bring the enemy's super unit; the final one, a unit with every group.
+    if (champions && (n === waves.count || (k === 0 && n >= waves.count - 2))) units.unshift(champions.id);
     const setup: ArmySetup = {
       slot: `wave${n}-${k}`,
       side: 1,
       faction: them.id,
       name: them.generalNames[(n + k) % them.generalNames.length]!,
       title: `Wave ${n}`,
-      dets: groupDets(defaultArmy(them.id, Math.floor(budget / groups), 14)),
+      dets: groupDets(units),
       deploy: waves.zones[(n + k) % waves.zones.length]!,
       ai: 'assault',
       pal,
@@ -141,9 +145,10 @@ registerScenarioScript('laststand', (b: Battle) => {
       if (sc.wave >= waves.count) return endBattle(b, 0, `held against all ${waves.count} waves`);
       const bonus = 250 + 100 * sc.wave;
       for (const p of w.players) if (b.army(p.army)?.side === 0) p.gold += bonus;
-      // AI-led allies have no gold: they get back half their missing men instead.
+      // AI-led allies get the bonus for their own purse, and half their missing men back.
       for (const a of w.armies) {
         if (a.side !== 0 || !aiArmy(b, a)) continue;
+        if (!b.player(a.ctrl)) a.gold += bonus;
         for (const u of w.units) if (u.army === a.id && u.st !== 'gone' && u.st !== 'shattered' && !u.engaged) addMen(b, u, Math.floor((u.max - u.sol.length) / 2));
       }
       b.reindex();

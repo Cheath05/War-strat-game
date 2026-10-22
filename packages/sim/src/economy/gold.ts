@@ -1,5 +1,6 @@
 // Gold (Last Stand, Objective battles, PVP Thermopylae): players earn it in battle and
 // spend it on new units, which march in from their map edge, or on refilling worn units.
+// While the AI leads an army, its general does the same with the army's own purse.
 
 import type { Battle } from '../battle';
 import { faction, unitType, hasUnitType } from '../data/registry';
@@ -8,6 +9,14 @@ import { HP_SCALE, strengthOf } from '../constants';
 import type { Army, Detachment, PlayerState, Unit } from '../types';
 import { spawnUnit, emptyDetOrder } from '../setup';
 import { orderMove } from '../commands';
+import { recruitable, roleOf, type UnitRole } from './armies';
+import { aiArmy } from '../ai/util';
+import { sec } from '../constants';
+
+/** Whoever holds the gold: a player, or the army itself while the AI leads it. */
+interface Purse {
+  gold: number;
+}
 
 export function goldEnabled(b: Battle, side?: number): boolean {
   const r = b.scenario.recruit;
@@ -22,21 +31,25 @@ export function earn(b: Battle, pid: number, amount: number): void {
 
 /** Buys a unit that arrives at the army's map edge and marches to the front. */
 export function recruit(b: Battle, p: PlayerState, typeId: string): void {
-  const sc = b.scenario;
-  if (!sc.recruit || !hasUnitType(typeId) || b.world.phase !== 'battle') return;
   const army = b.army(p.army);
-  if (!army || !goldEnabled(b, army.side)) return;
+  if (!army) return;
+  buyUnit(b, army, p, typeId, p.role === 'commander' ? b.detachment(p.det) : undefined, p.name);
+}
+
+function buyUnit(b: Battle, army: Army, purse: Purse, typeId: string, det: Detachment | undefined, who: string): boolean {
+  const sc = b.scenario;
+  if (!sc.recruit || !hasUnitType(typeId) || b.world.phase !== 'battle' || !goldEnabled(b, army.side)) return false;
   const t = unitType(typeId);
-  if (t.faction !== army.faction || t.general || !faction(army.faction).units.includes(t)) return;
-  if (p.gold < t.cost) return;
+  if (t.faction !== army.faction || t.general || !faction(army.faction).units.includes(t)) return false;
+  if (purse.gold < t.cost) return false;
   const alive = b.world.units.filter((u) => u.army === army.id && u.st !== 'gone').length;
-  if (alive >= sc.recruit.maxUnits) return;
-  p.gold -= t.cost;
+  if (alive >= sc.recruit.maxUnits) return false;
+  purse.gold -= t.cost;
   // Reinforcements join the commander's detachment, or a reserve detachment of the general.
-  let det = p.role === 'commander' ? b.detachment(p.det) : undefined;
   if (!det) det = b.world.dets.find((d) => d.army === army.id && d.name === 'Reinforcements') ?? newDetachment(b, army, 'Reinforcements');
   arrive(b, army, det, typeId);
-  b.msg(`${p.name}'s ${t.name} are on their way.`, 'info', army.side);
+  b.msg(`${who}'s ${t.name} are on their way.`, 'info', army.side);
+  return true;
 }
 
 /** Adds an empty detachment to an army (for reinforcements and waves). */
@@ -71,9 +84,14 @@ export function arrive(b: Battle, army: Army, det: Detachment, typeId: string): 
 /** Refills a worn unit out of combat, near its general or map edge. Price per man. */
 export function replenish(b: Battle, p: PlayerState, unitId: number): void {
   const army = b.army(p.army);
-  if (!army || !goldEnabled(b, army.side) || b.world.phase !== 'battle') return;
   const u = b.unit(unitId);
-  if (!u || u.army !== army.id || u.st === 'gone' || u.st === 'routing' || u.st === 'shattered' || u.engaged) return;
+  if (army && u) refill(b, army, p, u, p.id);
+}
+
+/** Refills u from the purse; the message goes to player `to` (0: the army's side). */
+function refill(b: Battle, army: Army, purse: Purse, u: Unit, to: number): void {
+  if (!goldEnabled(b, army.side) || b.world.phase !== 'battle') return;
+  if (u.army !== army.id || u.st === 'gone' || u.st === 'routing' || u.st === 'shattered' || u.engaged) return;
   const missing = u.max - u.sol.length;
   if (missing <= 0) return;
   const t = b.typeOf(u);
@@ -82,11 +100,54 @@ export function replenish(b: Battle, p: PlayerState, unitId: number): void {
   const gen = b.soldier(army.genSoldier);
   const near = (gen && dist(c.x, c.y, gen.x, gen.y) < 50) || dist(c.x, c.y, army.edgeX, army.edgeY) < 60;
   if (!near) return;
-  const n = Math.min(missing, Math.floor(p.gold / price));
+  const n = Math.min(missing, Math.floor(purse.gold / price));
   if (n <= 0) return;
-  p.gold -= n * price;
+  purse.gold -= n * price;
   addMen(b, u, n);
-  b.msg(`${t.name} replenished (+${n}).`, 'good', -1, p.id);
+  if (to) b.msg(`${t.name} replenished (+${n}).`, 'good', -1, to);
+  else b.msg(`${army.name}'s ${t.name} replenished (+${n}).`, 'good', army.side);
+}
+
+/** The army's purse while the AI leads it: its player's gold if it has one, else its own. */
+function purseOf(b: Battle, a: Army): Purse {
+  return b.player(a.ctrl) ?? a;
+}
+
+/**
+ * The AI general spends gold every ten seconds in gold modes: refilling worn units resting
+ * near him or the map edge, then buying units to keep the army balanced (about half line
+ * infantry), and its faction's super unit when rich enough and it has none.
+ */
+export function aiSpend(b: Battle): void {
+  const w = b.world;
+  const sc = b.scenario;
+  if (!sc.recruit?.gold || w.phase !== 'battle') return;
+  for (const a of w.armies) {
+    if ((w.tick + a.id * 7) % sec(10) !== 0 || !goldEnabled(b, a.side) || !aiArmy(b, a)) continue;
+    const purse = purseOf(b, a);
+    const own = w.units.filter((u) => u.army === a.id && u.st !== 'gone');
+    for (const u of own) if ((u.max - u.sol.length) * 4 >= u.max) refill(b, a, purse, u, 0);
+    if (own.length >= sc.recruit.maxUnits) continue;
+    const pool = recruitable(a.faction);
+    const champions = pool.find((t) => t.elite);
+    if (champions && purse.gold >= champions.cost * 1.25 && !own.some((u) => b.typeOf(u).elite)) {
+      buyUnit(b, a, purse, champions.id, undefined, a.name);
+      continue;
+    }
+    const count: Record<UnitRole, number> = { line: 0, missile: 0, horse: 0 };
+    for (const u of own) if (!b.typeOf(u).general) count[roleOf(b.typeOf(u))]++;
+    const n = count.line + count.missile + count.horse + 1;
+    const role: UnitRole = count.line * 2 < n ? 'line' : count.missile * 4 < n ? 'missile' : count.horse * 4 < n ? 'horse' : 'line';
+    // The best unit of that kind it can afford.
+    let pick: string | undefined;
+    let best = -1;
+    for (const t of pool) {
+      if (t.elite || roleOf(t) !== role || t.cost > purse.gold || t.cost <= best) continue;
+      best = t.cost;
+      pick = t.id;
+    }
+    if (pick) buyUnit(b, a, purse, pick, undefined, a.name);
+  }
 }
 
 /** Fresh men join a unit just behind it (replenishing, and AI allies between waves). */
@@ -101,7 +162,7 @@ export function addMen(b: Battle, u: Unit, n: number): void {
   }
 }
 
-/** Steady income for players on gold sides, once a second. */
+/** Steady income for players on gold sides, and armies without one, once a second. */
 export function payIncome(b: Battle): void {
   const r = b.scenario.recruit;
   if (!r?.income || b.world.tick % 20 !== 0) return;
@@ -110,6 +171,8 @@ export function payIncome(b: Battle): void {
     const a = b.army(p.army);
     if (a && goldEnabled(b, a.side)) p.gold = Math.round((p.gold + r.income / 60) * 100) / 100;
   }
+  if (!r.gold) return;
+  for (const a of b.world.armies) if (!b.player(a.ctrl) && goldEnabled(b, a.side)) a.gold = Math.round((a.gold + r.income / 60) * 100) / 100;
 }
 
 /** Gold for kills: a share of the fallen soldier's price goes to whoever led the killers. */
@@ -120,8 +183,7 @@ export function bounty(b: Battle, killerUnit: number, victimType: string): void 
   if (!a || !goldEnabled(b, a.side)) return;
   const d = b.detachment(ku.det);
   const pid = ku.possBy || d?.ctrl || a.ctrl;
-  const p = b.player(pid);
-  if (!p) return;
+  const purse: Purse = b.player(pid) ?? a;
   const t = unitType(victimType);
-  p.gold = Math.round((p.gold + (t.cost / Math.max(1, t.size)) * 0.2) * 100) / 100;
+  purse.gold = Math.round((purse.gold + (t.cost / Math.max(1, t.size)) * 0.2) * 100) / 100;
 }

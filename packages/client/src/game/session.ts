@@ -133,15 +133,10 @@ export class GameSession {
       this.renderer = null;
     }
     this.stopped = false;
-    const r = new BattleRenderer(container, this.battle, this.opts.graphics);
-    this.renderer = r;
+    const r = this.attach(container);
     music.play(this.battle.world.phase === 'ended' ? 'victory' : 'battle');
     // Dev-only handle for debugging in the browser console.
     if (import.meta.env.DEV) (window as unknown as { __pl: GameSession }).__pl = this;
-    r.mine = (u) => this.mine(u);
-    r.visible = (u) => !this.fog || this.mySide < 0 || this.fog.visible(u, this.mySide);
-    r.orderMarkers = () => this.orderMarkers();
-    this.input = new BattleInput(this, r, container);
     // Start the camera over our own army (or our side, if ours arrives later), looking toward the enemy.
     const me = this.me;
     this.lastArmy = me?.army ?? 0;
@@ -172,6 +167,44 @@ export class GameSession {
   }
 
   private onResize = (): void => this.renderer?.resize();
+
+  /** Builds the battlefield view and its input in the container. */
+  private attach(container: HTMLElement): BattleRenderer {
+    const r = new BattleRenderer(container, this.battle, this.opts.graphics);
+    this.renderer = r;
+    r.mine = (u) => this.mine(u);
+    r.visible = (u) => !this.fog || this.mySide < 0 || this.fog.visible(u, this.mySide);
+    // Spectators see the first side as friends.
+    r.relation = (u) => (this.mine(u) ? 'mine' : u.side === Math.max(0, this.mySide) ? 'ally' : 'enemy');
+    r.outlines = this.opts.graphics.outlines;
+    r.orderMarkers = () => this.orderMarkers();
+    this.input = new BattleInput(this, r, container);
+    return r;
+  }
+
+  /**
+   * New graphics settings mid-battle. Most apply at once; quality, blur and pixel size
+   * rebuild the view, keeping the camera and the selection where they were.
+   */
+  applyGraphics(g: GraphicsSettings): void {
+    const before = this.opts.graphics;
+    this.opts.graphics = g;
+    this.limiter.cap = g.fpsCap;
+    const old = this.renderer;
+    if (!old) return;
+    old.corpseTime = g.corpseTime;
+    old.outlines = g.outlines;
+    if (g.quality === before.quality && g.blur === before.blur && g.pixelSize === before.pixelSize) return;
+    const { tx, ty, dist, yaw } = old.rig;
+    const selected = [...old.selected];
+    this.input?.dispose();
+    old.dispose();
+    this.fog = null;
+    const r = this.attach(old.container);
+    Object.assign(r.rig, { tx, ty, dist, yaw });
+    r.rig.snap();
+    for (const id of selected) r.selected.add(id);
+  }
 
   private frame(t: number): void {
     const dt = Math.min(0.25, (t - this.last) / 1000);

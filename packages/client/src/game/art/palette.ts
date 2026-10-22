@@ -51,6 +51,8 @@ export const R = {
   canvas: 95,
   ivory: 98,
   fire: 101,
+  steel: 104,
+  silver: 107,
 } as const;
 export type Ramp = (typeof R)[keyof typeof R];
 
@@ -98,11 +100,14 @@ const RAMPS: Record<number, [number, number, number]> = {
   [R.canvas]: [0xa49676, 0xd4c6a2, 0xf2e8ca],
   [R.ivory]: [0xb8ac90, 0xe6dcc2, 0xfffaea],
   [R.fire]: [0xc84a14, 0xf2962a, 0xffe878],
+  // Blackened bronze or steel, and polished silver (super units).
+  [R.steel]: [0x17161c, 0x30313b, 0x5e6170],
+  [R.silver]: [0x7a8292, 0xbec6d2, 0xf6f9fc],
 };
 
 /** Index → whether it belongs to a shadable ramp, and which. */
 export function rampOf(i: number): number {
-  if (i < 8 || i > 103) return -1;
+  if (i < 8 || i > 109) return -1;
   return 8 + Math.floor((i - 8) / 3) * 3;
 }
 

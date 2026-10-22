@@ -3,6 +3,7 @@
 // them, friend or foe.
 
 import type { Battle } from '../battle';
+import { PACE } from '../constants';
 import { dist } from '../math/det';
 import { rand } from '../math/rng';
 import { ACT } from '../types';
@@ -22,7 +23,7 @@ export function updateBeasts(b: Battle): void {
       const s = b.soldier(id);
       if (!s) continue;
       const speed = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
-      const scything = t.cls === 'chariot' && speed > t.run * 0.5;
+      const scything = t.cls === 'chariot' && speed > t.run * PACE * 0.5;
       if (!scything && !rampage) continue;
       const r = t.radius + 1.2;
       b.grid.query(s.x, s.y, r + 1, (j) => {

@@ -3,9 +3,9 @@
 
 import { HP_SCALE, WORLD_VERSION, sec, strengthOf } from './constants';
 import { TEAM_COLORS } from './data/colors';
-import { faction, scenarioChoices, scenarioDef, unitType } from './data/registry';
+import { budgetFor, faction, scenarioChoices, scenarioDef, unitType } from './data/registry';
 import type { ArmySlotDef, DetDef, ScenarioDef, ZoneDef } from './data/types';
-import { groupDets } from './economy/armies';
+import { armyCost, groupDets } from './economy/armies';
 import { clamp, norm } from './math/det';
 import { seedRng } from './math/rng';
 import { buildMap, passableAt, type BattleMap } from './map/mapgen';
@@ -144,7 +144,9 @@ export function createWorld(setup: BattleSetup): World {
     if (!zoneDef) throw new Error(`Map ${map.id} has no zone ${a.deploy}`);
     const sharers = zoneUse.get(a.deploy)!;
     const zone = subZone(zoneDef, sharers.indexOf(a.slot), sharers.length);
-    spawnArmy(w, map, a, zone, pickColor(a, usedColors), setup.gold ?? 0);
+    // An army the AI may lead keeps what its army didn't cost of the side's budget (gold modes).
+    const purse = sc.recruit?.gold ? Math.max(0, budgetFor(sc, a.side) - armyCost(a.dets.flatMap((d) => d.units))) : 0;
+    spawnArmy(w, map, a, zone, pickColor(a, usedColors), purse);
   }
 
   for (const ps of setup.players) {
@@ -291,7 +293,7 @@ interface PlacedUnit {
   forward: number;
 }
 
-/** Creates an army with its general and detachments laid out in the zone. */
+/** Creates an army with its general and detachments laid out in the zone; gold is its AI purse. */
 export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef, pal: number, gold: number): Army {
   const fac = faction(a.faction);
   const [fx, fy] = norm(zone.dx, zone.dy, 0, -1);
@@ -327,6 +329,7 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
     genDead: false,
     kills: 0,
     losses: 0,
+    gold,
   };
   w.armies.push(army);
 
@@ -424,7 +427,6 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
     const u = w.units.find((x) => x.id === pick)!;
     w.soldiers.find((s) => s.id === u.cap)!.rank = RANK.commander;
   }
-  if (gold > 0) army.kills = 0;
   return army;
 }
 

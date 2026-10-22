@@ -48,9 +48,13 @@ export function Minimap({ session }: { session: GameSession }) {
         const c2 = b.center(u);
         if (!c2.n) continue;
         const a = b.army(u.army)!;
-        ctx.fillStyle = `#${TEAM_COLORS[a.pal]!.primary.toString(16).padStart(6, '0')}`;
         const sel = r?.selected.has(u.id);
         const s = sel ? 4 : 3;
+        // A frame says whose it is (gold yours, blue allies, red enemies); the fill is the army's colour.
+        const rel = r ? r.relation(u) : 'ally';
+        ctx.fillStyle = rel === 'mine' ? '#f2cd7e' : rel === 'ally' ? '#8fc8ff' : '#ff5a4a';
+        ctx.fillRect(Math.round(c2.x * sx - s / 2) - 1, Math.round(c2.y * sy - s / 2) - 1, s + 2, s + 2);
+        ctx.fillStyle = `#${TEAM_COLORS[a.pal]!.primary.toString(16).padStart(6, '0')}`;
         ctx.fillRect(Math.round(c2.x * sx - s / 2), Math.round(c2.y * sy - s / 2), s, s);
         if (sel) {
           ctx.strokeStyle = '#ffd257';

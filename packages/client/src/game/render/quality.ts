@@ -34,10 +34,17 @@ export interface GraphicsSettings {
   showFps: boolean;
   /** Most frames drawn a second; 0 draws one for every refresh of the screen. */
   fpsCap: number;
+  /** Seconds the fallen stay on the field before sinking away; 0 keeps them. */
+  corpseTime: number;
+  /** Outlines on the ground round every unit: gold yours, blue allies, red enemies. */
+  outlines: boolean;
 }
 
 /** The frame-rate limits a player can pick (0: no limit). */
 export const FPS_CAPS = [0, 30, 45, 60, 90, 120, 144];
+
+/** How long the fallen can stay, in seconds (0: for good). */
+export const CORPSE_TIMES = [20, 60, 180, 0];
 
 const KEY = 'pl.graphics';
 
@@ -97,5 +104,5 @@ function detectQuality(): QualityName {
 
 /** A first guess from the GPU and screen; the player can change it in Settings. */
 export function defaultGraphics(): GraphicsSettings {
-  return { quality: detectQuality(), blur: 'light', pixelSize: 1, showFps: false, fpsCap: 0 };
+  return { quality: detectQuality(), blur: 'light', pixelSize: 1, showFps: false, fpsCap: 0, corpseTime: 60, outlines: true };
 }

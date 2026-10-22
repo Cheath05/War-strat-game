@@ -1,13 +1,12 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { ORDER_NAMES, TEAM_COLORS, recruitable, type DetOrder, type FormationKind } from '@pl/sim';
+import { ORDER_NAMES, TEAM_COLORS, recruitable, unitType, type DetOrder, type FormationKind } from '@pl/sim';
 import { useStore } from '../app/store';
 import type { GameSession } from '../game/session';
 import type { DetCard, UnitCard } from '../game/hud';
 import { UnitIcon } from './UnitIcon';
 import { Minimap } from './Minimap';
-import { loadGraphics, saveGraphics } from '../game/render/quality';
-import { Segmented } from './controls';
-import { FPS_OPTIONS } from './Settings';
+import { loadGraphics } from '../game/render/quality';
+import { SettingsBody } from './Settings';
 
 const FORM_NAMES: Record<string, string> = {
   line: 'Line',
@@ -25,8 +24,9 @@ const fmt = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).padSt
 
 export function Hud({ session, exit, resultExit, chat }: { session: GameSession; exit: () => void; resultExit?: () => void; chat?: (text: string) => void }) {
   const h = useStore(session.hud, (s) => s);
-  const [menu, setMenu] = useState(false);
-  const [fpsCap, setFpsCap] = useState(session.limiter.cap);
+  const [menu, setMenu] = useState<'' | 'menu' | 'settings'>('');
+  // The results can be put aside to look over the field (and brought back).
+  const [resultHidden, setResultHidden] = useState(false);
   const [typing, setTyping] = useState(false);
   const [line, setLine] = useState('');
   useEffect(() => {
@@ -69,7 +69,7 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
       </div>
       <div className="hud-menu pl-hud-block">
         {h.paused && <span className="panel hud-tag">Paused{h.pausedBy ? ` by ${h.pausedBy}` : ''}</span>}
-        <button className="btn small" onClick={() => setMenu(true)}>
+        <button className="btn small" onClick={() => setMenu('menu')}>
           Menu
         </button>
       </div>
@@ -174,12 +174,21 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
           <DetPanel key={d.id} d={d} session={session} color={myColor} isGeneral={h.role === 'general'} />
         ))}
       </div>
-      {h.result && <Result session={session} exit={exit} resultExit={resultExit} />}
-      {menu && (
-        <div className="overlay pl-hud-block" onClick={() => setMenu(false)}>
+      {h.result && !resultHidden && <Result session={session} exit={exit} resultExit={resultExit} hide={() => setResultHidden(true)} />}
+      {h.result && resultHidden && (
+        <div className="panel hud-banner pl-hud-block">
+          <span className={h.result.winner < 0 ? '' : h.result.mine ? 'gold' : 'bad'}>{h.result.winner < 0 ? 'Draw' : h.result.mine ? 'Victory' : 'Defeat'}</span>
+          <span className="dim">· the battle is over</span>
+          <button className="btn small primary" onClick={() => setResultHidden(false)}>
+            Show results
+          </button>
+        </div>
+      )}
+      {menu === 'menu' && (
+        <div className="overlay pl-hud-block" onClick={() => setMenu('')}>
           <div className="panel battle-menu" onClick={(e) => e.stopPropagation()}>
             <h2 className="heading">Battle menu</h2>
-            <button className="btn primary" onClick={() => setMenu(false)}>
+            <button className="btn primary" onClick={() => setMenu('')}>
               Resume
             </button>
             <button className="btn" onClick={() => session.togglePause()}>
@@ -190,19 +199,27 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
                 Let the AI lead my troops: {h.auto ? 'on' : 'off'}
               </button>
             )}
+            <button className="btn" onClick={() => setMenu('settings')}>
+              Settings
+            </button>
             <button className="btn" onClick={exit}>
               {session.multiplayer ? 'Leave the room' : 'Leave battle'}
             </button>
-            <div className="label">Frame rate limit</div>
-            <Segmented
-              options={FPS_OPTIONS}
-              value={fpsCap}
-              onChange={(v) => {
-                session.limiter.cap = v;
-                saveGraphics({ ...loadGraphics(), fpsCap: v });
-                setFpsCap(v);
-              }}
-            />
+          </div>
+        </div>
+      )}
+      {menu === 'settings' && (
+        <div className="overlay pl-hud-block" onClick={() => setMenu('')}>
+          <div className="window settings" onClick={(e) => e.stopPropagation()}>
+            <header className="window-head">
+              <h2 className="heading">Settings</h2>
+              <button className="btn small ghost" onClick={() => setMenu('menu')}>
+                Back
+              </button>
+            </header>
+            <div className="window-body">
+              <SettingsBody onGraphics={(g) => session.applyGraphics(g)} />
+            </div>
           </div>
         </div>
       )}
@@ -264,7 +281,7 @@ function Card({ u, session, color }: { u: UnitCard; session: GameSession; color:
   const army = session.me ? session.battle.army(session.me.army) : undefined;
   return (
     <div
-      className={`ucard ${u.selected ? 'sel' : ''} ${u.morale}`}
+      className={`ucard ${u.selected ? 'sel' : ''} ${u.morale} ${unitType(u.type).elite ? 'elite' : ''}`}
       onClick={click}
       onDoubleClick={dbl}
       title={`${u.name}: ${u.n}/${u.max} men, ${u.order}, ${u.morale}${u.fat > 45 ? ', tired' : ''}`}
@@ -390,7 +407,7 @@ function OrdersPanel({ session, units }: { session: GameSession; units: UnitCard
   );
 }
 
-function Result({ session, exit, resultExit }: { session: GameSession; exit: () => void; resultExit?: () => void }) {
+function Result({ session, exit, resultExit, hide }: { session: GameSession; exit: () => void; resultExit?: () => void; hide: () => void }) {
   const h = useStore(session.hud, (s) => s);
   const b = session.battle;
   const r = h.result!;
@@ -429,6 +446,9 @@ function Result({ session, exit, resultExit }: { session: GameSession; exit: () 
           </div>
         )}
         <div className="row" style={{ justifyContent: 'center' }}>
+          <button className="btn" onClick={hide} title="Hide this and look over the battlefield">
+            View the battlefield
+          </button>
           {!session.multiplayer && (
             <button className="btn primary" onClick={exit}>
               Back to the menu

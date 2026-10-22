@@ -57,6 +57,7 @@ uniform float uTime;
 varying vec2 vSpriteUv;
 varying float vPal;
 varying vec4 vFx;
+varying float vGlint;
 `;
 
 const VERT_POS = /* glsl */ `
@@ -64,8 +65,9 @@ float u = iFx.x > 0.5 ? 1.0 - uv.x : uv.x;
 vSpriteUv = vec2(mix(iUV.x, iUV.z, u), mix(iUV.y, iUV.w, uv.y));
 vPal = iPal;
 vFx = iFx;
-// iFx.w > 1.5 marks swaying foliage.
-float sway = iFx.w > 1.5 ? sin(uTime * 1.3 + iPos.x * 0.37 + iPos.z * 0.21) * 0.06 * position.y * position.y * iSize.y : 0.0;
+// iFx.w: 2 marks swaying foliage, 3 a super unit (a glint of gold runs over it now and then).
+float sway = abs(iFx.w - 2.0) < 0.5 ? sin(uTime * 1.3 + iPos.x * 0.37 + iPos.z * 0.21) * 0.06 * position.y * position.y * iSize.y : 0.0;
+vGlint = iFx.w > 2.5 ? fract(uTime * 0.22 + iPos.x * 0.013 + iPos.z * 0.017) * 3.0 - 1.0 - (uv.x + uv.y) * 0.5 : -9.0;
 vec3 transformed = iPos + uRight * (position.x * iSize.x + sway) + uUp * (position.y * iSize.y);
 `;
 
@@ -75,6 +77,7 @@ uniform sampler2D uPalette;
 varying vec2 vSpriteUv;
 varying float vPal;
 varying vec4 vFx;
+varying float vGlint;
 `;
 
 const FRAG_COLOR = /* glsl */ `
@@ -87,6 +90,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.96, 0.9), vFx.y);
 diffuseColor.rgb *= 1.0 + vFx.z * 0.5;
 // Palette index 4 is the metal glint: push it past 1 so bloom catches it.
 if (idx == 4.0) diffuseColor.rgb *= 2.2;
+// Super units: a narrow diagonal band of gold light sweeps across every few seconds.
+diffuseColor.rgb += vec3(1.0, 0.82, 0.45) * 0.55 * max(0.0, 1.0 - abs(vGlint) * 9.0);
 `;
 
 function patchSprite(shader: THREE.WebGLProgramParametersWithUniforms, shared: SpriteShared, depth: boolean): void {
@@ -158,7 +163,7 @@ export class SpriteBatch {
 
   /**
    * Adds an instance with its feet at (x, height, z). fx: flip (0/1), flash (0..1),
-   * highlight (0..1), w (1 normal, 2 swaying foliage).
+   * highlight (0..1), w (1 normal, 2 swaying foliage, 3 a super unit's glint).
    */
   push(x: number, y: number, z: number, f: FrameRect, pal: number, flip: number, flash: number, highlight: number, scale = 1, w = 1): number {
     if (this.count >= this.capacity) return -1;

@@ -8,6 +8,11 @@ export const TICKS_PER_TURN = 2;
 export const HASH_EVERY = 20;
 /** Metres per map tile. */
 export const TILE = 2;
+/**
+ * Game pace: every unit's walking and running speed (in its data) is multiplied by this,
+ * so armies close faster than real men would.
+ */
+export const PACE = 1.3;
 /** Spatial grid cell size in metres. */
 export const GRID_CELL = 4;
 /** Sim schema version; bump when the world format changes. */

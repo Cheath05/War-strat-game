@@ -36,9 +36,13 @@ export interface MissileDef {
  * How the client's paper-doll generator draws this unit. The sim never reads it; it lives
  * here so a unit is defined in one place.
  */
+/** Colours a sprite part can take instead of its usual one. */
+export type Material = 'team' | 'team2' | 'bronze' | 'iron' | 'silver' | 'steel' | 'gold' | 'red' | 'black' | 'white' | 'purple' | 'linen' | 'leather';
+export type TintPart = 'cloth' | 'armor' | 'helm' | 'crest' | 'shield' | 'emblem' | 'cape' | 'trim';
+
 export interface SpriteSpec {
   body: 'light' | 'medium' | 'heavy' | 'robe';
-  armor: 'none' | 'linen' | 'bronze' | 'mail' | 'scale' | 'leather' | 'quilted';
+  armor: 'none' | 'linen' | 'bronze' | 'mail' | 'scale' | 'leather' | 'quilted' | 'segmentata';
   helmet:
     | 'none'
     | 'corinthian'
@@ -55,8 +59,11 @@ export interface SpriteSpec {
     | 'hood'
     | 'chalcidian'
     | 'kausia'
-    | 'headband';
-  crest: 'none' | 'transverse' | 'long' | 'feathers' | 'plume';
+    | 'headband'
+    | 'galea'
+    | 'lionpelt';
+  /** 'great': the tall, bushy horsehair crest of Sparta. */
+  crest: 'none' | 'transverse' | 'long' | 'feathers' | 'plume' | 'great';
   shield: 'none' | 'aspis' | 'scutum' | 'parma' | 'pelte' | 'thureos' | 'spara' | 'oval' | 'small';
   weapon: 'spear' | 'sword' | 'pike' | 'javelin' | 'bow' | 'sling' | 'axe' | 'lance' | 'falcata';
   /** Tunic colour: the army colour, natural linen, or dark. */
@@ -66,7 +73,11 @@ export interface SpriteSpec {
   skin?: 'light' | 'olive' | 'tan' | 'brown' | 'dark';
   mount?: 'horse' | 'darkhorse' | 'greyhorse' | 'elephant' | 'chariot';
   /** Shield device. */
-  emblem?: 'none' | 'lambda' | 'eagle' | 'owl' | 'star' | 'sun' | 'boss' | 'crescent' | 'lion';
+  emblem?: 'none' | 'lambda' | 'eagle' | 'owl' | 'star' | 'sun' | 'boss' | 'crescent' | 'lion' | 'wings';
+  /** Metal greaves on the shins. */
+  greaves?: boolean;
+  /** Part colours that replace the usual ones; 'trim' edges armour, helmet and shield in that colour. */
+  tint?: Partial<Record<TintPart, Material>>;
 }
 
 export interface UnitTypeDef {
@@ -110,6 +121,11 @@ export interface UnitTypeDef {
   large?: boolean;
   /** The general's bodyguard. */
   general?: boolean;
+  /**
+   * A super unit: the faction's champions. Recruited on purpose (never in a balanced army),
+   * they lead the last waves of Last Stand and are drawn larger, with gold on their banner.
+   */
+  elite?: boolean;
   /** Fear caused in nearby enemies. */
   terror?: number;
   abilities?: string[];
