@@ -11,6 +11,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.1',
+    date: '22 October 2026',
+    title: 'Mouse buttons your way',
+    items: [
+      'Right click now selects (click, or hold and drag a box) and left click moves, attacks and draws formation lines.',
+      'Prefer the classic Total War buttons? Settings → Controls → Mouse buttons → "Left selects" switches them back, also from the battle menu.',
+    ],
+  },
+  {
     version: '1.3.0',
     date: '21 October 2026',
     title: 'Super units, iconic armies and smoother marching',

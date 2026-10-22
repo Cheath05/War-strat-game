@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { CORPSE_TIMES, FPS_CAPS, loadGraphics, saveGraphics, type BlurLevel, type GraphicsSettings, type QualityName } from '../game/render/quality';
+import { loadControls, saveControls, type ControlSettings } from '../game/input/controls';
 import { audio, type AudioPrefs } from '../audio/engine';
 import { ui } from '../audio/sfx';
 import { Backdrop } from './Backdrop';
@@ -24,6 +25,11 @@ const BLURS: SegOption<BlurLevel>[] = [
 ];
 
 const CORPSES: SegOption<number>[] = CORPSE_TIMES.map((v) => ({ v, label: v === 0 ? 'Stay' : v < 60 ? `${v} s` : `${v / 60} min` }));
+
+const MOUSE: SegOption<string>[] = [
+  { v: 'swap', label: 'Right selects', title: 'Right click selects; left click moves and attacks' },
+  { v: 'classic', label: 'Left selects', title: 'Left click selects; right click moves and attacks (classic Total War)' },
+];
 
 const PIXELS: SegOption<number>[] = [
   { v: 1, label: 'Sharp' },
@@ -60,6 +66,12 @@ export function Settings({ back }: { back: () => void }) {
 export function SettingsBody({ onGraphics }: { onGraphics?: (g: GraphicsSettings) => void }) {
   const [g, setG] = useState<GraphicsSettings>(loadGraphics());
   const [a, setA] = useState<AudioPrefs>(audio.prefs);
+  const [c, setC] = useState<ControlSettings>(loadControls());
+  const setControls = (p: Partial<ControlSettings>): void => {
+    const next = { ...c, ...p };
+    setC(next);
+    saveControls(next);
+  };
   const setAudio = (p: Partial<AudioPrefs>): void => {
     const next = { ...a, ...p };
     setA(next);
@@ -104,6 +116,12 @@ export function SettingsBody({ onGraphics }: { onGraphics?: (g: GraphicsSettings
         </Setting>
         <Setting name="Frame rate counter" desc="Frames a second, in the corner during battle.">
           <Toggle on={g.showFps} label={g.showFps ? 'Shown' : 'Hidden'} onChange={(showFps) => set({ showFps })} />
+        </Setting>
+      </section>
+      <section>
+        <div className="label">Controls</div>
+        <Setting name="Mouse buttons" desc="One button selects (click, or drag a box); the other moves, attacks and draws formation lines.">
+          <Segmented options={MOUSE} value={c.swapMouse ? 'swap' : 'classic'} onChange={(v) => setControls({ swapMouse: v === 'swap' })} />
         </Setting>
       </section>
       <section>

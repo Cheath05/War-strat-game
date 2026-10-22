@@ -1,6 +1,8 @@
 import { Backdrop } from './Backdrop';
+import { mouseNames } from '../game/input/controls';
 
 export function Help({ back }: { back: () => void }) {
+  const m = mouseNames();
   return (
     <div className="screen">
       <Backdrop dim />
@@ -21,14 +23,14 @@ export function Help({ back }: { back: () => void }) {
           <h3>Commanding (General's view)</h3>
           <ul>
             <li>
-              <span className="kbd">Left click</span> select a unit, <span className="kbd">Shift</span> to add, or drag a box around several.
+              <span className="kbd">{m.pick} click</span> select a unit, <span className="kbd">Shift</span> to add, or drag a box around several. Settings → Mouse buttons swaps the two buttons.
             </li>
             <li>
-              <span className="kbd">Right click</span> move there; on an enemy, attack. <span className="kbd">Double right click</span> or{' '}
+              <span className="kbd">{m.act} click</span> move there; on an enemy, attack. <span className="kbd">Double {m.act.toLowerCase()} click</span> or{' '}
               <span className="kbd">Shift</span> to run.
             </li>
             <li>
-              <span className="kbd">Right drag</span> draw the line your units should form: drag wider for a long thin line, shorter for a deep block.
+              <span className="kbd">{m.act} drag</span> draw the line your units should form: drag wider for a long thin line, shorter for a deep block.
             </li>
             <li>
               <span className="kbd">F</span> formation (phalanx, testudo, wedge...), <span className="kbd">H</span> halt, <span className="kbd">T</span> fire at will,{' '}
