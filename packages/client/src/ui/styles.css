@@ -1484,8 +1484,24 @@ section > .label:first-child::after {
 /* The end of a battle. */
 .result {
   width: min(92vw, 600px);
+  /* Never taller than the screen: the army list scrolls, the buttons stay in reach. */
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
   padding: 28px 30px 24px;
   text-align: center;
+}
+.result > * {
+  flex-shrink: 0;
+}
+.result > .stats-scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 18px 0;
+}
+.result .stats {
+  margin: 0;
 }
 .result .big {
   margin: 0 0 6px;

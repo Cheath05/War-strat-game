@@ -467,6 +467,10 @@ function Result({ session, exit, resultExit, hide }: { session: GameSession; exi
     ref.current = true;
   }, []);
   const best = [...b.world.units].sort((x, y) => y.kills - x.kills)[0];
+  // Armies the AI alone leads (Last Stand's waves) share one row.
+  const horde = b.world.armies.filter((a) => b.scenario.sides[a.side]?.aiOnly);
+  const rest = b.world.armies.filter((a) => !horde.includes(a));
+  const color = (pal: number): string => `#${TEAM_COLORS[pal]!.primary.toString(16).padStart(6, '0')}`;
   return (
     <div className="overlay pl-hud-block">
       <div className="panel result">
@@ -482,14 +486,25 @@ function Result({ session, exit, resultExit, hide }: { session: GameSession; exi
             Victory points: {b.world.sides.map((s) => `${s.name} ${s.score}`).join(' · ')}
           </div>
         )}
-        <div className="stats">
-          <b>Army</b>
-          <b>Kills</b>
-          <b>Losses</b>
-          <b>General</b>
-          {b.world.armies.map((a) => (
-            <ArmyRow key={a.id} name={`${a.name} (${a.title})`} color={`#${TEAM_COLORS[a.pal]!.primary.toString(16).padStart(6, '0')}`} kills={a.kills} losses={a.losses} dead={a.genDead} />
-          ))}
+        <div className="stats-scroll">
+          <div className="stats">
+            <b>Army</b>
+            <b>Kills</b>
+            <b>Losses</b>
+            <b>General</b>
+            {rest.map((a) => (
+              <ArmyRow key={a.id} name={`${a.name} (${a.title})`} color={color(a.pal)} kills={a.kills} losses={a.losses} general={a.genDead ? 'fell' : 'lives'} />
+            ))}
+            {horde.length > 0 && (
+              <ArmyRow
+                name={horde.length > 1 ? `${b.world.sides[horde[0]!.side]!.name}: the waves (${horde.length} armies)` : `${horde[0]!.name} (${horde[0]!.title})`}
+                color={color(horde[0]!.pal)}
+                kills={horde.reduce((n, a) => n + a.kills, 0)}
+                losses={horde.reduce((n, a) => n + a.losses, 0)}
+                general={horde.length > 1 ? `${horde.filter((a) => a.genDead).length} of ${horde.length} fell` : horde[0]!.genDead ? 'fell' : 'lives'}
+              />
+            )}
+          </div>
         </div>
         {best && (
           <div style={{ margin: '8px 0' }}>
@@ -522,13 +537,13 @@ function Result({ session, exit, resultExit, hide }: { session: GameSession; exi
   );
 }
 
-function ArmyRow({ name, color, kills, losses, dead }: { name: string; color: string; kills: number; losses: number; dead: boolean }) {
+function ArmyRow({ name, color, kills, losses, general }: { name: string; color: string; kills: number; losses: number; general: string }) {
   return (
     <>
       <span style={{ color }}>{name}</span>
       <span>{kills}</span>
       <span>{losses}</span>
-      <span className="dim">{dead ? 'fell' : 'lives'}</span>
+      <span className="dim">{general}</span>
     </>
   );
 }

@@ -11,6 +11,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.2',
+    date: '22 October 2026',
+    title: 'A results screen that fits',
+    items: [
+      'The results screen never runs off the bottom any more: the list of armies scrolls, and the buttons back to the menu or lobby stay in view.',
+      'Last Stand\'s waves share one row in the results instead of one row per wave.',
+    ],
+  },
+  {
     version: '1.5.1',
     date: '22 October 2026',
     title: 'Fighting back, and a free hand in the Sandbox',
