@@ -12,6 +12,8 @@ import { RANK, UF } from './types';
 import { possess, unpossess, avatarAction } from './roles/possession';
 import { useAbility } from './roles/abilities';
 import { recruit, replenish } from './economy/gold';
+import { findSpot, nearestStandable } from './setup';
+import { moveMask } from './units/movement';
 import { aiArmy } from './ai/util';
 
 export type Command =
@@ -62,6 +64,12 @@ export function controls(b: Battle, p: PlayerState, u: Unit): boolean {
   if (p.role === 'commander') return d.ctrl === p.id;
   // A general commands their army, except detachments led by human commanders.
   return u.army === p.army && (d.ctrl === 0 || d.ctrl === p.id || d.guard);
+}
+
+/** In a sandbox the host also places the AI-led armies at deployment. */
+export function placesForAi(b: Battle, p: PlayerState, u: Unit): boolean {
+  const a = b.army(u.army);
+  return !!b.scenario.sandbox && p.host && p.on && b.world.phase === 'deploy' && !!a && aiArmy(b, a);
 }
 
 function ownedUnits(b: Battle, p: PlayerState, ids: number[]): Unit[] {
@@ -126,7 +134,7 @@ function applyOne(b: Battle, p: PlayerState, c: Command): void {
     case 'deploy': {
       if (!deploy || !finite(c.x, c.y, c.dx, c.dy)) return;
       const u = b.unit(c.u);
-      if (!u || !controls(b, p, u)) return;
+      if (!u || !(controls(b, p, u) || placesForAi(b, p, u))) return;
       teleportUnit(b, u, q2(c.x), q2(c.y), c.dx, c.dy);
       return;
     }
@@ -305,14 +313,20 @@ export function setFormation(b: Battle, u: Unit, f: FormationKind): void {
   if (!FORM[f].brace) u.flags &= ~UF.brace;
 }
 
-/** Instantly places a unit in formation (deployment phase only). */
+/**
+ * Instantly places a unit in formation (deployment phase only): inside its army's deployment
+ * zone, or anywhere on the map in a sandbox; always on dry, open ground (the nearest there is).
+ */
 export function teleportUnit(b: Battle, u: Unit, x: number, y: number, dx: number, dy: number): void {
   const army = b.army(u.army);
   if (!army) return;
-  // Units stay inside their army's deployment zone.
   const [x0, y0, x1, y1] = army.zone as [number, number, number, number];
-  if (x < x0 || x > x1 || y < y0 || y > y1) return;
+  const sandbox = !!b.scenario.sandbox;
+  if (!sandbox && (x < x0 || x > x1 || y < y0 || y > y1)) return;
+  if (x < 0 || y < 0 || x >= b.map.wm || y >= b.map.hm) return;
   const [fx, fy] = norm(dx, dy, u.dx, u.dy);
+  const zone = sandbox ? null : { x0, y0, x1, y1, dx: fx, dy: fy };
+  [x, y] = findSpot(b.map, u.type, u.sol.length, x, y, fx, fy, zone, []);
   const ox = u.ax;
   const oy = u.ay;
   u.ax = x;
@@ -320,11 +334,11 @@ export function teleportUnit(b: Battle, u: Unit, x: number, y: number, dx: numbe
   u.dx = fx;
   u.dy = fy;
   u.trail = [];
+  const mask = moveMask(b.typeOf(u));
   for (const id of u.sol) {
     const s = b.soldier(id);
     if (!s) continue;
-    s.x += x - ox;
-    s.y += y - oy;
+    [s.x, s.y] = nearestStandable(b.map, s.x + x - ox, s.y + y - oy, mask);
     s.fx = fx;
     s.fy = fy;
   }

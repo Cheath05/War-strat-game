@@ -37,6 +37,10 @@ export function Help({ back }: { back: () => void }) {
               <span className="kbd">K</span> skirmish mode, <span className="kbd">G</span> guard mode.
             </li>
             <li>
+              Idle units fight back on their own: attacked, they turn on the attacker; shot at, they charge the shooters if they can catch them (Romans close
+              up in testudo against horse archers). <b>Guard mode</b> keeps a unit exactly where you put it.
+            </li>
+            <li>
               <span className="kbd">Ctrl+1..9</span> make a group, <span className="kbd">1..9</span> select it (twice to jump there).
             </li>
             <li>

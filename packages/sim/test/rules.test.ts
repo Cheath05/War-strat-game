@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMap, findPath, MOVE, TERRAIN, spacing } from '../src';
+import { buildMap, findPath, MOVE, TERRAIN, UF, spacing } from '../src';
 import { orderAttack, orderMove, setFormation } from '../src/commands';
 import { emptyBattle, place, run } from './helpers';
 
@@ -42,8 +42,8 @@ describe('combat rules', () => {
     for (const ammo of [true, false]) {
       const b = emptyBattle({ ammo, morale: false });
       const archers = place(b, 1, 'greece.archers', 150, 60, 0, 1, 20);
-      // 60 m away: inside the archers' 85 m range.
-      place(b, 0, 'rome.triarii', 150, 120, 0, -1, 20);
+      // 60 m away: inside the archers' 85 m range, standing their ground (guard mode) under fire.
+      place(b, 0, 'rome.triarii', 150, 120, 0, -1, 20).flags |= UF.guard;
       run(b, 200);
       if (ammo) expect(archers.ammo).toBe(0);
       else expect(archers.ammo).toBeGreaterThan(0);
@@ -118,3 +118,36 @@ describe('maps and paths', () => {
     expect(u.width).toBe(u.bw);
   });
 });
+
+describe('Under missile fire', () => {
+  const shoot = (ours: string, theirs: string, guard = false) => {
+    const b = emptyBattle({}, 3);
+    const u = place(b, 0, ours, 150, 160, 0, -1, 40);
+    if (guard) u.flags |= UF.guard;
+    const e = place(b, 1, theirs, 150, 100, 0, 1, 30);
+    e.flags |= UF.fireAtWill;
+    let charged = false;
+    let testudo = false;
+    for (let t = 0; t < 20 * 20; t++) {
+      b.step([]);
+      charged ||= u.order.k === 'attack' && u.order.target === e.id;
+      testudo ||= u.form === 'testudo';
+    }
+    return { charged, testudo };
+  };
+
+  it('charges the archers shooting at it', () => {
+    expect(shoot('greece.hoplites', 'persia.archers').charged).toBe(true);
+  });
+
+  it('holds its ground in guard mode', () => {
+    expect(shoot('greece.hoplites', 'persia.archers', true).charged).toBe(false);
+  });
+
+  it('forms testudo against horse archers it cannot catch', () => {
+    const r = shoot('rome.hastati', 'persia.saka');
+    expect(r.charged).toBe(false);
+    expect(r.testudo).toBe(true);
+  });
+});
+

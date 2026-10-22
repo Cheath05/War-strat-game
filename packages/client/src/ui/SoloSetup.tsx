@@ -39,7 +39,7 @@ export function SoloSetup({ go }: { go: (s: Screen) => void }) {
       settings,
       options: choices,
       armies: sc.sandbox ? (sandboxed.length ? sandboxed : undefined) : recruited ? [recruited] : undefined,
-      players: [{ id: 1, name: loadProfile().name || 'Commander', role: role.k, slot, det: role.k === 'commander' ? role.det : 0, gold: sc.recruit ? Math.max(0, budget - (budget ? armyCost(army) : 0)) : undefined }],
+      players: [{ id: 1, name: loadProfile().name || 'Commander', role: role.k, slot, det: role.k === 'commander' ? role.det : 0, host: true, gold: sc.recruit ? Math.max(0, budget - (budget ? armyCost(army) : 0)) : undefined }],
     };
     go({ k: 'battle', setup, playerId: 1 });
   };

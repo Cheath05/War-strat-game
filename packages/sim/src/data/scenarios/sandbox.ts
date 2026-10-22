@@ -62,7 +62,8 @@ function configure(c: Record<string, string>): ScenarioDef {
     blurb: 'Pick the ground and the armies: any country, any units, as many as you like. Rome and Greece against Persia? Your call.',
     mode: 'sandbox',
     map: { id: m.map },
-    deploySeconds: 90,
+    // Time to set the field up: the battle starts when everyone is ready.
+    deploySeconds: 900,
     victory: [{ k: 'rout' }],
     sandbox: { maxUnits: SANDBOX_UNITS },
     sides: [sides[0]!, sides[1]!],

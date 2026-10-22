@@ -408,7 +408,7 @@ export class RoomCore {
       scenario: this.scenario,
       settings: this.settings,
       map: this.map ?? undefined,
-      players: this.players.map((p) => ({ id: p.id, name: p.name, role: p.role, slot: p.slot, det: p.det, gold: this.startGold(p) })),
+      players: this.players.map((p) => ({ id: p.id, name: p.name, role: p.role, slot: p.slot, det: p.det, host: p.host, gold: this.startGold(p) })),
       armies: this.armies.length ? this.armies : undefined,
       options: this.options,
     };

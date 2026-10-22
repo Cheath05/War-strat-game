@@ -89,7 +89,12 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
       {h.phase === 'deploy' && (
         <div className="panel hud-banner pl-hud-block">
           <span>
-            Deployment <span className="dim">· {mouseNames().act.toLowerCase()}-drag to place your units in the golden zone</span>
+            Deployment{' '}
+            <span className="dim">
+              {h.sandbox
+                ? `· select units, then ${mouseNames().act.toLowerCase()}-drag to place them anywhere on the map${h.host ? ', the AI’s armies too' : ''}. The battle starts when everyone is ready.`
+                : `· ${mouseNames().act.toLowerCase()}-drag to place your units in the golden zone`}
+            </span>
           </span>
           <button className={`btn ${h.ready ? 'on' : 'primary'}`} onClick={() => session.issue({ k: 'ready', on: !h.ready })}>
             {h.ready ? 'Waiting…' : 'Ready for battle'}

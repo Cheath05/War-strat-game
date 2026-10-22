@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, FACTIONS, TICK_HZ, armyCost, defaultArmy, defaultSettings, groupDets, recruitedArmy, scenarioChoices, scenarioDef, validArmy } from '../src';
-import { passableAt } from '../src/map/mapgen';
+import { dryAt, passableAt } from '../src/map/mapgen';
 import { moveMask } from '../src/units/movement';
 
 function thermopylae(seed: number): Battle {
@@ -156,5 +156,37 @@ describe('Sandbox', () => {
     // The armies march across and fight.
     while (!w.result && w.tick < 180 * TICK_HZ) b.step([]);
     expect(w.armies.reduce((n, a) => n + a.losses, 0)).toBeGreaterThan(0);
+  });
+
+  it('lets units be placed anywhere at deployment, the host place the AI too, and never in the water', () => {
+    const options = { map: 'plains', a1: 'rome', b1: 'persia' };
+    const b = Battle.create({
+      seed: 4,
+      scenario: 'sandbox',
+      options,
+      settings: defaultSettings(),
+      players: [
+        { id: 1, name: 'Host', role: 'general', slot: 'a1', det: 0, host: true },
+        { id: 2, name: 'Guest', role: 'spectator', slot: '', det: 0 },
+      ],
+    });
+    const w = b.world;
+    expect(w.phase).toBe('deploy');
+    const mine = w.units.find((u) => u.army === w.armies[0]!.id && u.id !== w.armies[0]!.genUnit)!;
+    const theirs = w.units.find((u) => u.army === w.armies[1]!.id && u.id !== w.armies[1]!.genUnit)!;
+    // Far outside the starting zone (the middle of the map), and the AI's unit by the host only.
+    b.step([{ p: 1, c: { k: 'deploy', u: mine.id, x: 120, y: 150, dx: 0, dy: -1 } }]);
+    b.step([{ p: 2, c: { k: 'deploy', u: theirs.id, x: 300, y: 200, dx: 0, dy: 1 } }]);
+    expect(Math.hypot(mine.ax - 120, mine.ay - 150)).toBeLessThan(4);
+    expect(Math.hypot(theirs.ax - 300, theirs.ay - 200)).toBeGreaterThan(20);
+    b.step([{ p: 1, c: { k: 'deploy', u: theirs.id, x: 300, y: 200, dx: 0, dy: 1 } }]);
+    expect(Math.hypot(theirs.ax - 300, theirs.ay - 200)).toBeLessThan(20);
+    // Dropped in the stream: it forms up on the bank instead.
+    const stream = { x: b.map.wm * 0.66, y: b.map.hm * 0.5 };
+    b.step([{ p: 1, c: { k: 'deploy', u: mine.id, x: stream.x, y: stream.y, dx: 0, dy: -1 } }]);
+    for (const id of mine.sol) {
+      const sl = b.soldier(id)!;
+      expect(dryAt(b.map, sl.x, sl.y)).toBe(true);
+    }
   });
 });

@@ -8,11 +8,11 @@ import type { ArmySlotDef, DetDef, ScenarioDef, ZoneDef } from './data/types';
 import { armyCost, groupDets } from './economy/armies';
 import { clamp, norm } from './math/det';
 import { seedRng } from './math/rng';
-import { buildMap, passableAt, type BattleMap } from './map/mapgen';
+import { buildMap, dryAt, passableAt, type BattleMap } from './map/mapgen';
 import { MOVE } from './map/terrain';
 import type { Army, Detachment, MapRef, PlayerState, Settings, Soldier, Unit, World } from './types';
 import { RANK } from './types';
-import { defaultWidth, frontageOf, slotOffset } from './units/formation';
+import { defaultWidth, frontageOf, slotOffset, spacing } from './units/formation';
 
 export interface PlayerSetup {
   id: number;
@@ -22,6 +22,8 @@ export interface PlayerSetup {
   slot: string;
   /** Detachment index within the army (commander role); 0 is the first non-guard detachment. */
   det: number;
+  /** The room's host (the only player in a solo game). */
+  host?: boolean;
   /** Gold to start the battle with (what's left from recruiting); defaults to setup.gold. */
   gold?: number;
 }
@@ -169,6 +171,7 @@ export function createWorld(setup: BattleSetup): World {
       gold: ps.gold ?? setup.gold ?? 0,
       kills: 0,
       led: 0,
+      host: !!ps.host,
       ready: false,
     };
     if (army) bindPlayer(w, p, army);
@@ -404,8 +407,10 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
   placed.push({ type: genType, det: guardDet.id, lateral: 0, forward: (twoLines ? -lineDepth / 2 : 0) - 16 });
 
   for (const pu of placed) {
-    const lx = clamp(cx + rx * pu.lateral + fx * pu.forward, zone.x0, zone.x1);
-    const ly = clamp(cy + ry * pu.lateral + fy * pu.forward, zone.y0, zone.y1);
+    let lx = clamp(cx + rx * pu.lateral + fx * pu.forward, zone.x0, zone.x1);
+    let ly = clamp(cy + ry * pu.lateral + fy * pu.forward, zone.y0, zone.y1);
+    // Never in the water, a wall or on top of another unit: the nearest good ground instead.
+    [lx, ly] = findSpot(map, pu.type, sizeOf(pu.type), lx, ly, fx, fy, zone, w.units);
     const det = w.dets.find((d) => d.id === pu.det)!;
     const isGen = pu.det === guardDet.id;
     const u = spawnUnit(w, army, det, pu.type, lx, ly, fx, fy, sizeOf(pu.type), map);
@@ -434,6 +439,74 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
 function isScreen(type: string): boolean {
   const t = unitType(type);
   return !t.mounted && (t.cls === 'skirm' || t.cls === 'archer' || t.cls === 'slinger');
+}
+
+/** Width (frontage) and depth in metres of a fresh unit of n men in its first formation. */
+function blockOf(type: string, n: number): [number, number] {
+  const t = unitType(type);
+  const men = Math.max(1, n - 1);
+  const width = defaultWidth(men, t);
+  const [, sy] = spacing(t, t.forms[0]!);
+  return [frontageOf(t, t.forms[0]!, width), (Math.ceil(men / width) - 1) * sy];
+}
+
+const moveMaskOf = (type: string): number => {
+  const t = unitType(type);
+  return t.cls === 'ele' || t.cls === 'chariot' ? MOVE.large : t.mounted ? MOVE.horse : MOVE.foot;
+};
+
+/**
+ * Where a unit of n men can form up facing (fx, fy) with its front rank centred near (x, y):
+ * its whole block on dry, open ground (no water, marsh, walls or cliffs), clear of the units
+ * already on the field. Searches outward from (x, y), inside the zone first; crowded zones may
+ * stack units, and if all else fails the nearest ground a man can stand on will do.
+ */
+export function findSpot(map: BattleMap, type: string, n: number, x: number, y: number, fx: number, fy: number, zone: ZoneDef | null, others: Unit[]): [number, number] {
+  const mask = moveMaskOf(type);
+  const [front, depth] = blockOf(type, n);
+  const rx = -fy;
+  const ry = fx;
+  const reach = Math.sqrt(front * front + depth * depth) / 2;
+  // The block, from the officer's place in front to the rear rank, one man wider each side.
+  const ground = (px: number, py: number): boolean => {
+    for (let l = -front / 2 - 1; l <= front / 2 + 1.01; l += 2) {
+      for (let k = -2; k <= depth + 1.01; k += 2) {
+        const qx = px + rx * l - fx * k;
+        const qy = py + ry * l - fy * k;
+        if (!passableAt(map, qx, qy, mask) || !dryAt(map, qx, qy)) return false;
+      }
+    }
+    return true;
+  };
+  const clear = (px: number, py: number): boolean => {
+    const mx = px - fx * (depth / 2);
+    const my = py - fy * (depth / 2);
+    for (const o of others) {
+      if (o.st === 'gone') continue;
+      const [of, od] = blockOf(o.type, o.sol.length);
+      const ox = o.ax - o.dx * (od / 2);
+      const oy = o.ay - o.dy * (od / 2);
+      const r = reach + Math.sqrt(of * of + od * od) / 2;
+      if ((mx - ox) * (mx - ox) + (my - oy) * (my - oy) < r * r * 0.5) return false;
+    }
+    return true;
+  };
+  const inZone = (px: number, py: number): boolean => !zone || (px >= zone.x0 && px <= zone.x1 && py >= zone.y0 && py <= zone.y1);
+  const tries: ((px: number, py: number) => boolean)[] = [
+    (px, py) => inZone(px, py) && ground(px, py) && clear(px, py),
+    (px, py) => inZone(px, py) && ground(px, py),
+    (px, py) => ground(px, py) && clear(px, py),
+  ];
+  for (const ok of tries) {
+    if (ok(x, y)) return [x, y];
+    for (let r = 2; r <= 160; r += 2) {
+      for (let k = 0; k < 16; k++) {
+        const [dx, dy] = RING[k]!;
+        if (ok(x + dx * r, y + dy * r)) return [x + dx * r, y + dy * r];
+      }
+    }
+  }
+  return nearestStandable(map, x, y, mask);
 }
 
 /** Nearest point a soldier of this movement class can stand on (tile centre), or the point itself. */

@@ -18,6 +18,8 @@ export const UF = {
   charging: 32,
   evading: 64,
   needPath: 128,
+  /** Formed testudo against missiles it can't answer; drops it when they stop. */
+  cover: 256,
 } as const;
 
 /** Soldier action kinds (Soldier.actK). */
@@ -252,6 +254,8 @@ export interface PlayerState {
   kills: number;
   /** Ticks spent leading in person. */
   led: number;
+  /** Hosts the room: in a sandbox they also place the AI's armies at deployment. */
+  host: boolean;
   /** Ready to end deployment. */
   ready: boolean;
   /** Let the AI lead this player's army or detachment (bots, or a player who just watches). */
