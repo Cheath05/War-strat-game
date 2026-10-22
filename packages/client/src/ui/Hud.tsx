@@ -7,6 +7,7 @@ import { UnitIcon } from './UnitIcon';
 import { Minimap } from './Minimap';
 import { loadGraphics } from '../game/render/quality';
 import { SettingsBody } from './Settings';
+import { mouseNames } from '../game/input/controls';
 
 const FORM_NAMES: Record<string, string> = {
   line: 'Line',
@@ -88,7 +89,7 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
       {h.phase === 'deploy' && (
         <div className="panel hud-banner pl-hud-block">
           <span>
-            Deployment <span className="dim">· right-drag to place your units in the golden zone</span>
+            Deployment <span className="dim">· {mouseNames().act.toLowerCase()}-drag to place your units in the golden zone</span>
           </span>
           <button className={`btn ${h.ready ? 'on' : 'primary'}`} onClick={() => session.issue({ k: 'ready', on: !h.ready })}>
             {h.ready ? 'Waiting…' : 'Ready for battle'}

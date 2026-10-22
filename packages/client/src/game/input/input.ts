@@ -1,11 +1,14 @@
-// Mouse and keyboard. In the General's view it works like Total War: left-click or drag to
-// select, right-click to move or attack, right-drag to lay out a formation line, double
-// right-click to run. In possession, WASD steers the officer and hotkeys command his men.
+// Mouse and keyboard. In the General's view one mouse button selects (click, or drag a box)
+// and the other commands: click to move or attack, drag to lay out a formation line, double
+// click to run. Classic Total War has left select and right command; the Mouse buttons
+// setting swaps them. Below, "left" and "right" mean the select and command buttons. In
+// possession, WASD steers the officer and hotkeys command his men.
 
 import { spacing, type DetOrder, type FormationKind, type Unit } from '@pl/sim';
 import { ui } from '../../audio/sfx';
 import type { BattleRenderer, FormationGhost } from '../render/BattleRenderer';
 import type { GameSession } from '../session';
+import { loadControls } from './controls';
 
 interface Placement {
   u: Unit;
@@ -100,11 +103,17 @@ export class BattleInput {
 
   private onContext = (e: MouseEvent): void => e.preventDefault();
 
+  /** A physical button as the select (0) or command (2) button. */
+  private role(button: number): number {
+    return loadControls().swapMouse && (button === 0 || button === 2) ? 2 - button : button;
+  }
+
   private onDown = (e: PointerEvent): void => {
     if ((e.target as HTMLElement).closest('.pl-hud-block')) return;
     const p = this.local(e);
-    if (e.button === 0) this.leftDown = p;
-    if (e.button === 2) {
+    const b = this.role(e.button);
+    if (b === 0) this.leftDown = p;
+    if (b === 2) {
       const g = this.r.ground(p.x, p.y);
       if (g) this.rightDown = { ...p, gx: g.x, gy: g.y };
     }
@@ -132,7 +141,7 @@ export class BattleInput {
         });
       }
     }
-    if (this.rightDown && !this.possessing()) {
+    if (this.rightDown && !this.possessing() && !this.pendingDet) {
       const g = this.r.ground(p.x, p.y);
       if (g && Math.hypot(g.x - this.rightDown.gx, g.y - this.rightDown.gy) > 3) {
         this.r.ghosts = this.layout(this.selectedUnits(), this.rightDown.gx, this.rightDown.gy, g.x, g.y).map(toGhost(this.b));
@@ -142,15 +151,25 @@ export class BattleInput {
 
   private onUp = (e: PointerEvent): void => {
     const p = this.local(e);
-    if (e.button === 0 && this.leftDown) {
+    const b = this.role(e.button);
+    if (this.pendingDet && ((b === 0 && this.leftDown) || (b === 2 && this.rightDown))) {
+      // A detachment order's target: left click places it and right click cancels, whichever
+      // button selects.
+      this.leftDown = this.rightDown = null;
+      this.box.style.display = 'none';
+      this.r.ghosts = [];
+      if (e.button === 0) this.finishDetOrder(p.x, p.y);
+      else {
+        this.pendingDet = null;
+        this.orderMode = '';
+      }
+      return;
+    }
+    if (b === 0 && this.leftDown) {
       const start = this.leftDown;
       this.leftDown = null;
       this.box.style.display = 'none';
       if (this.possessing()) return;
-      if (this.pendingDet) {
-        this.finishDetOrder(p.x, p.y);
-        return;
-      }
       if (Math.abs(p.x - start.x) + Math.abs(p.y - start.y) > 6) {
         const units = this.r.unitsInRect(start.x, start.y, p.x, p.y, (u) => this.s.mine(u));
         this.select(
@@ -164,16 +183,11 @@ export class BattleInput {
       }
       return;
     }
-    if (e.button === 2 && this.rightDown) {
+    if (b === 2 && this.rightDown) {
       const start = this.rightDown;
       this.rightDown = null;
       const ghosts = this.r.ghosts;
       this.r.ghosts = [];
-      if (this.pendingDet) {
-        this.pendingDet = null;
-        this.orderMode = '';
-        return;
-      }
       if (this.possessing()) return;
       const now = performance.now();
       const dbl = now - this.lastRightUp < 320;
