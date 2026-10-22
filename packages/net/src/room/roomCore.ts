@@ -17,6 +17,7 @@ import {
   slotSide,
   STRENGTHS,
   validArmy,
+  validSandboxArmy,
   type ArmySetup,
   type ScenarioDef,
   type BattleSetup,
@@ -291,13 +292,31 @@ export class RoomCore {
         if (!p.host) return;
         this.map = m.map;
         break;
-      case 'options':
-        // New choices can change factions and maps: recruited armies start over.
-        if (!p.host) return;
-        this.options = scenarioChoices(this.scenario, m.options ?? {});
-        this.armies = [];
-        for (const x of this.players) x.ready = false;
+      case 'options': {
+        const next = scenarioChoices(this.scenario, m.options ?? {});
+        if (!p.host) {
+          // In a sandbox a General may pick their own army's faction (but not remove it).
+          const changed = Object.keys(next).filter((k) => next[k] !== this.options[k]);
+          const mine = this.sc().options?.find((o) => o.slot && o.slot === p.slot);
+          if (!this.sc().sandbox || p.role !== 'general' || !mine || changed.some((k) => k !== mine.id) || next[mine.id] === 'none') return;
+        }
+        this.options = next;
+        const sc = this.sc();
+        // New choices can change factions and maps: recruited armies start over, except in a
+        // sandbox, where any faction's units will do and only removed armies' go.
+        this.armies = sc.sandbox
+          ? this.armies.flatMap((a) => recruitedArmy(sc, a.slot, a.dets.flatMap((d) => d.units)) ?? [])
+          : [];
+        for (const x of this.players) {
+          // Players whose army was taken out of the battle watch instead.
+          if (x.role !== 'spectator' && slotSide(sc, x.slot) < 0) {
+            x.role = 'spectator';
+            x.slot = '';
+          }
+          x.ready = false;
+        }
         break;
+      }
       case 'claim':
         this.claim(p, m.role, String(m.slot ?? ''), Math.max(0, Math.floor(Number(m.det) || 0)));
         break;
@@ -305,18 +324,23 @@ export class RoomCore {
         p.ready = !!m.on;
         break;
       case 'army': {
-        // A General recruited an army for their slot (gold modes); the relay checks the bill.
-        if (p.role !== 'general') return;
+        // A General recruited an army for their slot (gold modes: the relay checks the bill). In
+        // a sandbox the host also puts together the armies no player leads.
         const sc = this.sc();
+        const slot = m.slot ? String(m.slot) : p.slot;
+        const own = p.role === 'general' && slot === p.slot;
+        const forAi = !!sc.sandbox && p.host && !this.players.some((x) => x.role === 'general' && x.slot === slot);
+        if (!slot || (!own && !forAi)) return;
         const units = Array.isArray(m.units) ? m.units.map(String).slice(0, 40) : [];
-        const others = this.armies.filter((a) => a.slot !== p.slot);
+        const others = this.armies.filter((a) => a.slot !== slot);
         if (!units.length) {
           this.armies = others;
           break;
         }
-        const side = slotSide(sc, p.slot);
-        const army = recruitedArmy(sc, p.slot, units);
-        if (!army || !sc.recruit || !validArmy(army.faction, units, budgetFor(sc, side), sc.recruit.maxUnits)) return;
+        const side = slotSide(sc, slot);
+        const army = recruitedArmy(sc, slot, units);
+        if (!army) return;
+        if (sc.sandbox ? !validSandboxArmy(units, sc.sandbox.maxUnits) : !sc.recruit || !validArmy(army.faction, units, budgetFor(sc, side), sc.recruit.maxUnits)) return;
         this.armies = [...others, army];
         break;
       }

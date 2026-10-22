@@ -2,7 +2,7 @@
 
 import type { ArmySetup, BattleSetup, Command, MapRef, Settings, TaggedCommand } from '@pl/sim';
 
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 export interface LobbyPlayer {
   id: number;
@@ -36,8 +36,11 @@ export type LobbyOp =
   | { op: 'map'; map: MapRef | null }
   | { op: 'claim'; role: LobbyPlayer['role']; slot: string; det: number }
   | { op: 'ready'; on: boolean }
-  /** A General's recruited army (gold modes); an empty list goes back to the default army. */
-  | { op: 'army'; units: string[] }
+  /**
+   * A General's recruited army (gold modes and sandbox); an empty list goes back to the default
+   * army. In a sandbox the host may also set up an AI-led army by its slot.
+   */
+  | { op: 'army'; units: string[]; slot?: string }
   | { op: 'options'; options: Record<string, string> }
   | { op: 'start' }
   | { op: 'kick'; id: number }

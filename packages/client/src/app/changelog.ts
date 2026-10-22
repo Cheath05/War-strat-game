@@ -11,6 +11,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.0',
+    date: '22 October 2026',
+    title: 'The Sandbox',
+    items: [
+      'New battle: the Sandbox. Pick the ground and up to four armies a side, each of any country: Rome and Greece against Persia, or whatever you like.',
+      'Fill each army with any units from any country, super units too: up to thirty, and free. Shift-click adds five at once.',
+      'Friends take an army and choose its country and units themselves; the host sets up the armies the AI leads.',
+      'Three new battlefields for the Sandbox: Rolling Hills, Woodland and the Desert, laid out a little differently every battle.',
+      'Every rule and choice in the battle setup now says what it does and how it changes the battle.',
+    ],
+  },
+  {
     version: '1.4.0',
     date: '22 October 2026',
     title: 'Orders for your allies, and cleaner marching',

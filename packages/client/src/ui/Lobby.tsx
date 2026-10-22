@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { budgetFor, faction, listScenarios, scenarioDef, unitType, type Settings } from '@pl/sim';
+import { budgetFor, faction, listScenarios, scenarioDef, slotSide, unitType, type Settings } from '@pl/sim';
 import { RecruitPanel } from './Recruit';
 import { RulesEditor, ScenarioOptions } from './Rules';
+import { SandboxArmies } from './Sandbox';
 import { Backdrop } from './Backdrop';
 import { VersionBadge } from './Version';
 import type { C2S, LobbyState } from '@pl/net';
@@ -34,6 +35,8 @@ export function Lobby({
   const [msg, setMsg] = useState('');
   const [copied, setCopied] = useState(false);
   const [recruiting, setRecruiting] = useState(false);
+  // Sandbox: the army whose units are being chosen.
+  const [editing, setEditing] = useState('');
   // Keep the newest chat line in view.
   const log = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -133,6 +136,43 @@ export function Lobby({
                 <ScenarioOptions sc={raw} choices={lobby.options} onChange={host ? (c) => send({ t: 'lobby', op: 'options', options: c }) : undefined} />
               </section>
 
+              {sc.sandbox ? (
+                <section>
+                  <div className="label">Armies</div>
+                  <p className="hint">
+                    Take an army to lead it, then choose its country and units. {host ? 'You set up the armies the AI leads, and add or remove armies.' : 'The host sets up the armies the AI leads.'}
+                  </p>
+                  <SandboxArmies
+                    sc={sc}
+                    choices={lobby.options}
+                    unitSize={s.unitSize}
+                    unitsOf={(sl) => unitsOf(sl.key) ?? sl.dets.flatMap((d) => d.units)}
+                    canSetCountry={(sl) => host || (self?.role === 'general' && self.slot === sl.key)}
+                    canEditUnits={(sl) => {
+                      const general = players.find((p) => p.role === 'general' && p.slot === sl.key);
+                      return general ? general.id === me : host;
+                    }}
+                    canAddRemove={host}
+                    setChoices={(c) => send({ t: 'lobby', op: 'options', options: c })}
+                    editUnits={(sl) => setEditing(sl.key)}
+                    extra={(sl) => {
+                      const general = players.find((p) => p.role === 'general' && p.slot === sl.key);
+                      return (
+                        <div className="slot-line">
+                          <span className="dim">General</span>
+                          {general ? <b>{general.name}</b> : <span className="dim">AI</span>}
+                          <span style={{ flex: 1 }} />
+                          {!general && (
+                            <button className="btn small" onClick={() => send({ t: 'lobby', op: 'claim', role: 'general', slot: sl.key, det: 0 })}>
+                              Lead this army
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }}
+                  />
+                </section>
+              ) : (
               <section>
                 <div className="label">Armies</div>
                 <p className="hint">Lead an army as General, or serve its General as one of their Commanders. Empty places are led by the AI.</p>
@@ -201,6 +241,7 @@ export function Lobby({
                   ))}
                 </div>
               </section>
+              )}
 
               <section>
                 <div className="label">Rules{host ? '' : ' · the host sets these'}</div>
@@ -266,6 +307,24 @@ export function Lobby({
         </div>
       </div>
       <VersionBadge />
+      {(() => {
+        const sl = sc.sides.flatMap((x) => x.slots).find((x) => x.key === editing);
+        return (
+          sl && (
+            <RecruitPanel
+              title={`${sl.name}, ${sl.title}`}
+              factionId={sl.faction}
+              budget={0}
+              maxUnits={sc.sandbox?.maxUnits ?? 30}
+              units={unitsOf(sl.key) ?? sl.dets.flatMap((d) => d.units)}
+              pal={slotSide(sc, sl.key) === 0 ? 0 : 2}
+              sandbox
+              onChange={(units) => send({ t: 'lobby', op: 'army', units, slot: sl.key })}
+              onClose={() => setEditing('')}
+            />
+          )
+        );
+      })()}
       {recruiting && mySlot && (
         <RecruitPanel
           title={`${mySlot.sl.name}, ${mySlot.sl.title}`}

@@ -77,6 +77,7 @@ Every battle has two sides. If all of you are on one side, it's co-op against th
   - Ten waves come from the map edges, each bigger than the last: two armies at once from wave 5, three from wave 9.
   - A wave counts as beaten when fewer than one in seven of its troops still fight. Each player then gets 250 + 100 × the wave number in gold, AI-led allies get half their missing men back, and the next wave comes 30 s later. A wave not beaten after three minutes doesn't hold back the next.
   - Your score is the number of waves beaten. Beating all ten wins.
+- **Sandbox:** pick the ground (Open Plains, Rolling Hills, Woodland, Desert, the River Crossing, the Hill Camp or the Hot Gates), then up to four armies a side, each of any faction and made of any faction's units (up to 30, at no cost; no gold in battle). Each army slot's faction is a lobby option ('a1'...'b4'; 'none' leaves it out). A General picks their own army's faction and units; the host also sets up the AI's armies and adds or removes armies.
 - **Objective battles** (PVE or PVP):
   - **Capture & Hold:** three points on the plains, the river crossing or the hill camp. Each point held scores a victory point a second. 1,200 wins; otherwise most points after 20 minutes. 4,000 gold per army, plus 60 a minute.
   - **Defend the Bridge:** the attackers must get 60 men across the river, by the bridge or the fords, within 15 minutes. The defenders have 3,500 gold per army and the attackers 5,500. One AI attacker goes for the bridge and one marches round by the north ford.

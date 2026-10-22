@@ -182,7 +182,12 @@ export interface ScenarioSideDef {
 export interface ScenarioOption {
   id: string;
   name: string;
-  choices: { id: string; name: string }[];
+  /** What the choice changes, shown in the lobby. */
+  desc?: string;
+  /** Each choice may say what it's like too (shown when it's picked). */
+  choices: { id: string; name: string; desc?: string }[];
+  /** The faction of one army slot (sandbox): chosen on that army in the lobby, not with the rest. */
+  slot?: string;
 }
 
 export type VictoryRule =
@@ -199,7 +204,7 @@ export interface ScenarioDef {
   year?: string;
   blurb: string;
   history?: string;
-  mode: 'historical' | 'laststand' | 'objective' | 'test';
+  mode: 'historical' | 'laststand' | 'objective' | 'sandbox' | 'test';
   /** Test-only scenarios don't appear in menus. */
   hidden?: boolean;
   map: { id: string; seed?: number; params?: Record<string, number> };
@@ -213,6 +218,11 @@ export interface ScenarioDef {
    * gold per minute per human player.
    */
   recruit?: { gold: number; maxUnits: number; sides?: number[]; income?: number; goldBySide?: number[] };
+  /**
+   * Sandbox: every army is put together freely, from any faction's units, up to maxUnits each
+   * and at no cost; there is no gold in the battle.
+   */
+  sandbox?: { maxUnits: number };
   /** Lobby choices; `configure` builds the battle from the chosen ones. */
   options?: ScenarioOption[];
   configure?: (choices: Record<string, string>) => ScenarioDef;
