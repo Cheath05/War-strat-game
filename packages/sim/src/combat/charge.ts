@@ -3,7 +3,7 @@
 // braced spears facing the charge, which stop it cold and hurt the charger.
 
 import type { Battle } from '../battle';
-import { sec } from '../constants';
+import { PACE, sec } from '../constants';
 import { len, norm } from '../math/det';
 import { rand } from '../math/rng';
 import { terrainAt } from '../map/mapgen';
@@ -30,7 +30,7 @@ export function resolveCharges(b: Battle): void {
     if (!(u.flags & UF.charging) || u.st === 'routing' || u.st === 'shattered') continue;
     const t = b.typeOf(u);
     const speed = len(s.vx, s.vy);
-    if (speed < t.run * 0.55) continue;
+    if (speed < t.run * PACE * 0.55) continue;
     const [dx, dy] = norm(s.vx, s.vy);
     let hit = 0;
     let hitD = Infinity;

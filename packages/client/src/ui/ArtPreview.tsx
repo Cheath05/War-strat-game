@@ -1,11 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { FACTIONS } from '@pl/sim';
 import { frameKey, spriteKey } from '../game/art/atlas';
-import { POSES, type View } from '../game/art/doll';
+import { type Pose, type View } from '../game/art/doll';
 import { colorOf } from '../game/art/palette';
 import { sharedArt } from '../game/render/BattleRenderer';
 
-/** Dev page (#art): every unit's frames, scaled up, in a chosen team colour. */
+/** The views shown per unit: front, side and back standing, then side and front striking, side walking. */
+const SHOTS: [View, Pose][] = [
+  [0, 'idle0'],
+  [2, 'idle0'],
+  [1, 'idle0'],
+  [2, 'atk1'],
+  [0, 'atk1'],
+  [2, 'walk0'],
+  [0, 'dead'],
+];
+
+/** Dev page (#art): every unit of a faction in its key views, scaled up, in a chosen team colour. */
 export function ArtPreview() {
   const ref = useRef<HTMLCanvasElement>(null);
   const [pal, setPal] = useState(0);
@@ -14,33 +25,31 @@ export function ArtPreview() {
     const c = ref.current!;
     const { atlas, palette } = sharedArt();
     const f = FACTIONS.find((x) => x.id === faction)!;
-    const S = 3;
+    const S = 4;
     const cell = 66;
-    const rows = f.units.length * 3;
-    c.width = POSES.length * cell * S;
-    c.height = rows * cell * S;
+    c.width = SHOTS.length * cell * S;
+    c.height = f.units.length * cell * S;
     const g = c.getContext('2d')!;
     g.fillStyle = '#5c8f3a';
     g.fillRect(0, 0, c.width, c.height);
-    let row = 0;
-    for (const t of f.units) {
-      for (const view of [0, 1, 2] as View[]) {
-        POSES.forEach((pose, i) => {
-          const px = atlas.cells.get(frameKey(spriteKey(t), pose === 'dead' ? 0 : view, pose));
-          if (!px) return;
-          for (let y = 0; y < px.h; y++) {
-            for (let x = 0; x < px.w; x++) {
-              const idx = px.data[y * px.w + x]!;
-              if (!idx) continue;
-              const [r, gg, b] = colorOf(palette, pal, idx);
-              g.fillStyle = `rgb(${r},${gg},${b})`;
-              g.fillRect((i * cell + x) * S, (row * cell + y) * S, S, S);
-            }
+    f.units.forEach((t, row) => {
+      SHOTS.forEach(([view, pose], i) => {
+        const px = atlas.cells.get(frameKey(spriteKey(t), view, pose));
+        if (!px) return;
+        for (let y = 0; y < px.h; y++) {
+          for (let x = 0; x < px.w; x++) {
+            const idx = px.data[y * px.w + x]!;
+            if (!idx) continue;
+            const [r, gg, b] = colorOf(palette, pal, idx);
+            g.fillStyle = `rgb(${r},${gg},${b})`;
+            g.fillRect((i * cell + x) * S, (row * cell + y) * S, S, S);
           }
-        });
-        row++;
-      }
-    }
+        }
+      });
+      g.fillStyle = '#fff';
+      g.font = '14px sans-serif';
+      g.fillText(t.name, 6, row * cell * S + 16);
+    });
   }, [pal, faction]);
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'auto', background: '#222' }}>

@@ -11,6 +11,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.0',
+    date: '21 October 2026',
+    title: 'Super units, iconic armies and smoother marching',
+    items: [
+      'Spartans carry the bronze shield with the great lambda and wear the tall horsehair crest; Greek hoplites have bronze greaves.',
+      'Roman legionaries: red scutum with gold wings and thunderbolts, banded armour, crested helmets; triarii wear the centurion-style crest.',
+      'New super units, one per faction: Black Spartans, the Praetorian Guard, Apple-Bearers, Hannibal\'s Veterans and the Silver Shields. Bigger, gold-edged, fearsome, and very expensive. Recruit them in Last Stand and the objective battles; they lead the last waves of Last Stand.',
+      'Troops no longer squeeze into a column for no reason when they march, paths keep off walls, and everyone moves 30% faster.',
+      'The Last Stand hill has lost its ring wall: defend the hilltop camp from any side.',
+      'AI generals now spend gold: they refill worn units and buy reinforcements.',
+      'Clear sides: outlines on the ground and banner edges are gold for your units, blue for allies and red for enemies (also on the minimap).',
+      'The fallen sink away after a minute (Settings: 20 s to never). After a battle, "View the battlefield" hides the results.',
+      'Settings in the battle menu: graphics, frame rate limit, sound and more, applied at once.',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '21 October 2026',
     title: 'A new look',

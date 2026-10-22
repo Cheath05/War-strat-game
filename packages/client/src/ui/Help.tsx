@@ -72,7 +72,7 @@ export function Help({ back }: { back: () => void }) {
               come down behind you. Xerxes and the Immortals arrive later; a friend can claim them in the lobby and play the Persians.
             </li>
             <li>
-              <b>Last Stand:</b> four armies hold a hill fort, a river crossing or the Hot Gates against ten waves, each bigger than the last. Beating a wave pays
+              <b>Last Stand:</b> four armies hold a hilltop camp, a river crossing or the Hot Gates against ten waves, each bigger than the last. Beating a wave pays
               gold; your score is how many you beat.
             </li>
             <li>
@@ -93,6 +93,17 @@ export function Help({ back }: { back: () => void }) {
             <b>Strength</b> (a rule in the lobby) makes every soldier on one side tougher and harder-hitting: at ×2 each man fights like two. Use it as a
             handicap when the AI side is too much, or to even out a PVP game. In battle, <b>Menu → Let the AI lead my troops</b> hands your army to the AI
             general and commanders until you take it back.
+          </p>
+          <h3>Whose troops are whose</h3>
+          <p>
+            Every unit has a banner and a faint outline on the ground: <b>gold</b> for yours, <b>blue</b> for allies, <b>red</b> (and a square-cut banner) for the
+            enemy. The minimap frames each unit the same way.
+          </p>
+          <h3>Super units</h3>
+          <p>
+            Each faction has one: the Black Spartans, the Praetorian Guard, the Apple-Bearers, Hannibal's Veterans and the Silver Shields. They are bigger men in
+            gold-edged armour, nearly unbreakable, frighten enemies nearby and can Inspire their friends, and they cost a fortune. Recruit them in Last Stand and
+            the objective battles, and watch for them in the last waves of Last Stand.
           </p>
           <h3>Fog of war</h3>
           <p>

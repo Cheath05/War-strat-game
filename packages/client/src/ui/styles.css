@@ -90,6 +90,9 @@ strong {
 .gold {
   color: var(--gold-hi);
 }
+.bad {
+  color: var(--bad);
+}
 .row {
   display: flex;
   gap: 10px;
@@ -971,6 +974,10 @@ section > .label:first-child::after {
   width: 20px;
   height: 20px;
 }
+.recruit-card.elite {
+  border-color: rgba(242, 205, 126, 0.6);
+  background: linear-gradient(180deg, rgba(217, 171, 87, 0.16), rgba(26, 29, 35, 0.72));
+}
 .recruit-card.off {
   opacity: 0.4;
   cursor: default;
@@ -1048,8 +1055,26 @@ section > .label:first-child::after {
   height: 100%;
   background: var(--good);
 }
-.pl-banner:not(.mine) .pl-bar i {
+.pl-banner .pl-flag {
+  border-color: #f2cd7e;
+}
+.pl-banner.ally .pl-flag {
+  border-color: #8fc8ff;
+}
+.pl-banner.ally .pl-bar i {
+  background: #6fb2ec;
+}
+.pl-banner.enemy .pl-flag {
+  border-color: #ff6a5a;
+  border-radius: 1px;
+}
+.pl-banner.enemy .pl-bar i {
   background: var(--bad);
+}
+.pl-banner.elite .pl-flag {
+  box-shadow:
+    0 0 0 1px #f2cd7e,
+    0 0 8px rgba(242, 205, 126, 0.85);
 }
 .pl-banner.sel .pl-flag {
   outline: 1px solid var(--gold-hi);
@@ -1231,6 +1256,10 @@ section > .label:first-child::after {
   box-shadow:
     0 0 0 1px var(--gold),
     0 0 12px rgba(217, 171, 87, 0.35);
+}
+.ucard.elite {
+  border-color: rgba(242, 205, 126, 0.75);
+  background: linear-gradient(180deg, rgba(60, 48, 22, 0.95), rgba(22, 24, 30, 0.95));
 }
 .ucard.routing {
   animation: flash 0.5s steps(2) infinite;

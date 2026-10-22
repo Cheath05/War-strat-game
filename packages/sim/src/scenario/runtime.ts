@@ -4,7 +4,7 @@
 import type { Battle } from '../battle';
 import { TICK_HZ } from '../constants';
 import { dist } from '../math/det';
-import { payIncome } from '../economy/gold';
+import { aiSpend, payIncome } from '../economy/gold';
 
 export type ScenarioScript = (b: Battle) => void;
 
@@ -18,6 +18,7 @@ export function runScenario(b: Battle): void {
   const fn = SCRIPTS.get(b.world.scenario.id);
   if (fn) fn(b);
   payIncome(b);
+  aiSpend(b);
   if (b.world.objectives.length && b.world.tick % 5 === 0) updatePoints(b);
 }
 

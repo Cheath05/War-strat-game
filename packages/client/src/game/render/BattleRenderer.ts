@@ -56,6 +56,16 @@ const SYMBOL: Record<string, string> = {
 
 const hex = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
 
+/** Your own units, your side's other armies, and the enemy. */
+export type Relation = 'mine' | 'ally' | 'enemy';
+
+/** Ground outline colours by relation (a selection is brighter still). */
+const REL_LINE: Record<Relation, THREE.Color> = {
+  mine: new THREE.Color(0.95, 0.74, 0.28),
+  ally: new THREE.Color(0.4, 0.72, 1.0),
+  enemy: new THREE.Color(1.0, 0.3, 0.24),
+};
+
 export class BattleRenderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -71,6 +81,10 @@ export class BattleRenderer {
   mine = (_u: Unit): boolean => false;
   /** Fog of war: is this enemy unit visible to us? */
   visible = (_u: Unit): boolean => true;
+  /** Whose a unit is, from this player's point of view. */
+  relation = (_u: Unit): Relation => 'enemy';
+  /** Faint outlines on the ground round every unit, coloured by relation. */
+  outlines = true;
   /** Deployment zone to highlight, if any. */
   zone: number[] | null = null;
   /** Orders to show on the ground (a General's orders to their Commanders). */
@@ -93,8 +107,10 @@ export class BattleRenderer {
   private sky: THREE.Mesh;
   private prev = new Map<number, [number, number]>();
   private flash = new Map<number, number>();
-  private corpses: { x: number; y: number; h: number; f: FrameRect; pal: number; flip: number }[] = [];
+  private corpses: { x: number; y: number; h: number; f: FrameRect; pal: number; flip: number; t: number }[] = [];
   private corpseDirty = true;
+  /** Seconds the fallen stay before sinking away (0: for good). Changed from the battle menu. */
+  corpseTime: number;
   private time = 0;
   private frame = 0;
   private keyCache = new Map<string, string>();
@@ -110,6 +126,7 @@ export class BattleRenderer {
   ) {
     this.battle = battle;
     this.quality = QUALITY[graphics.quality];
+    this.corpseTime = graphics.corpseTime;
     const q = this.quality;
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
     this.renderer.setClearColor(0xd8d2c0);
@@ -241,8 +258,8 @@ export class BattleRenderer {
         const f = this.atlas.frames.get(frameKey(this.keyOf(t), 0, 'dead'));
         const army = b.army(e.army);
         if (f && army) {
-          this.corpses.push({ x: e.x, y: e.y, h: heightAt(b.map, e.x, e.y), f, pal: army.pal, flip: (e.s % 2) as number });
-          if (this.corpses.length > 4800) this.corpses.splice(0, 200);
+          this.corpses.push({ x: e.x, y: e.y, h: heightAt(b.map, e.x, e.y), f, pal: army.pal, flip: (e.s % 2) as number, t: this.time });
+          if (this.corpses.length > 3000) this.corpses.splice(0, 200);
           this.corpseDirty = true;
         }
         this.fx.blood(e.x, e.y, 4);
@@ -446,19 +463,38 @@ export class BattleRenderer {
       const pose = this.poseOf(s, u);
       const f = this.atlas.frames.get(frameKey(this.keyOf(t), view, pose));
       if (!f) continue;
-      const scale = s.rank === 3 ? 1.28 : s.rank === 2 ? 1.18 : s.rank === 1 ? 1.1 : 1;
+      // Officers stand taller, and super units are bigger men all round.
+      const scale = (s.rank === 3 ? 1.28 : s.rank === 2 ? 1.18 : s.rank === 1 ? 1.1 : 1) * (t.elite ? 1.12 : 1);
       const hl = s.id === this.possessed ? 0.6 : this.selected.has(u.id) ? 0.32 : this.hover === u.id ? 0.18 : 0;
       const knocked = s.act > 0 && s.actK === 2;
-      sb.push(x, gh - (knocked ? 0.5 : 0), y, f, army.pal, flip, Math.min(1, (this.flash.get(s.id) ?? 0) * 8), hl, scale);
+      sb.push(x, gh - (knocked ? 0.5 : 0), y, f, army.pal, flip, Math.min(1, (this.flash.get(s.id) ?? 0) * 8), hl, scale, t.elite ? 3 : 1);
       if (showBlobs) blobs.push(x, gh, y, t.radius * 2.6 * scale);
     }
     sb.end();
     blobs.end();
 
+    // The fallen sink into the ground over their last two seconds, then are gone.
+    const life = this.corpseTime;
+    if (life > 0) {
+      let k = 0;
+      for (const c of this.corpses) {
+        const age = this.time - c.t;
+        if (age >= life) continue;
+        if (age > life - 2) this.corpseDirty = true;
+        this.corpses[k++] = c;
+      }
+      if (k !== this.corpses.length) {
+        this.corpses.length = k;
+        this.corpseDirty = true;
+      }
+    }
     if (this.corpseDirty) {
       const cb = this.corpseBatch;
       cb.begin();
-      for (const c of this.corpses) cb.push(c.x, c.h - 0.1, c.y, c.f, c.pal, c.flip, 0, -0.25);
+      for (const c of this.corpses) {
+        const sink = life > 0 ? Math.max(0, this.time - c.t - (life - 2)) * 0.3 : 0;
+        cb.push(c.x, c.h - 0.1 - sink, c.y, c.f, c.pal, c.flip, 0, -0.25);
+      }
       cb.end();
       this.corpseDirty = false;
     }
@@ -525,17 +561,19 @@ export class BattleRenderer {
     const red = new THREE.Color(1, 0.3, 0.25);
     const ghostC = new THREE.Color(0.55, 0.85, 1.0);
     for (const u of b.world.units) {
-      if (u.st === 'gone') continue;
+      if (u.st === 'gone' || u.st === 'shattered') continue;
       const sel = this.selected.has(u.id);
       const hov = this.hover === u.id;
-      if (!sel && !hov) continue;
+      if (!sel && !hov && (!this.outlines || !this.visible(u))) continue;
       const t = b.typeOf(u);
       const n = Math.max(1, u.sol.length - 1);
       const [sx, sy] = spacing(t, u.form);
       const frontage = Math.max(0, Math.min(u.width, n) - 1) * sx;
       const depth = (Math.ceil(n / Math.max(1, u.width)) - 1) * sy;
-      const c = this.mine(u) ? (sel ? gold : white) : red;
+      const c = sel ? (this.mine(u) ? white : red) : hov ? white : REL_LINE[this.relation(u)];
+      // Lines are one pixel wide, so draw two, half a metre apart, for a bolder edge.
       o.formation(u.ax, u.ay, u.dx, u.dy, frontage, depth, c);
+      o.formation(u.ax + u.dx * 0.25, u.ay + u.dy * 0.25, u.dx, u.dy, frontage + 0.5, depth + 0.5, sel ? gold : c);
       if (sel && u.order.k === 'move') {
         o.arrow(u.ax, u.ay, u.order.x, u.order.y, white);
       } else if (sel && u.order.k === 'attack') {
@@ -582,11 +620,9 @@ export class BattleRenderer {
   private drawBanners(): void {
     const b = this.battle;
     const list: BannerInfo[] = [];
-    const zoomFar = this.rig.zoomT() > 0.12;
     for (const u of b.world.units) {
       if (u.st === 'gone' || !this.visible(u)) continue;
       const mine = this.mine(u);
-      if (!zoomFar && !mine && !this.selected.has(u.id) && this.hover !== u.id) continue;
       const c = b.center(u);
       if (!c.n) continue;
       const t = b.typeOf(u);
@@ -604,9 +640,11 @@ export class BattleRenderer {
         strength: u.sol.length / Math.max(1, u.max),
         morale: u.st === 'shattered' ? 'shattered' : u.st === 'routing' ? 'routing' : u.morale < 20 ? 'wavering' : 'steady',
         mine,
+        rel: this.relation(u),
         selected: this.selected.has(u.id),
         group: this.groups.has(u.id) ? String(this.groups.get(u.id)) : '',
         led: u.possBy !== 0,
+        elite: !!t.elite,
       });
     }
     this.banners.update(list);

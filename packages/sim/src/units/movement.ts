@@ -3,10 +3,10 @@
 // enemy he is fighting, while keeping clear of his neighbours and of impassable ground.
 
 import type { Battle } from '../battle';
-import { DT, TILE, sec } from '../constants';
+import { DT, PACE, TILE, sec } from '../constants';
 import type { UnitTypeDef } from '../data/types';
 import { clamp, dist, len, norm, turnToward } from '../math/det';
-import { clearanceAt, dryAt, dryClearanceAt, easyLine, passableAt, terrainSpeed } from '../map/mapgen';
+import { dryAt, easyLine, passableAt, terrainSpeed } from '../map/mapgen';
 import { findPath, classIndex } from '../map/pathfind';
 import { MOVE } from '../map/terrain';
 import type { Soldier, Unit } from '../types';
@@ -110,7 +110,7 @@ export function updateAnchors(b: Battle): void {
     }
     if (u.st !== 'moving' && u.width !== u.bw && u.form !== 'wedge') {
       // Out of the narrows: spread back out.
-      u.width = Math.min(u.bw, maxFilesAt(b, u, t, u.ax, u.ay));
+      u.width = maxFilesAt(b, u, t, u.ax, u.ay);
     }
   }
 }
@@ -180,16 +180,37 @@ function chaseStep(b: Battle, u: Unit, t: UnitTypeDef, tc: { x: number; y: numbe
 }
 
 
+/** Furthest a unit looks to either side for room, in metres. */
+const ROOM_MAX = 40;
+
 /**
- * Files that fit at a point, given the clearance on either side. On dry ground, water and
- * bog count as edges too, so a unit marching along a shore narrows instead of wading.
+ * Open ground to the left and right of (x, y) across the unit's front, in metres. On dry
+ * ground, water and bog count as edges too, so a unit marching along a shore keeps out of it.
+ */
+function sideRoom(b: Battle, u: Unit, t: UnitTypeDef, x: number, y: number): [number, number] {
+  const mask = moveMask(t);
+  const dry = dryAt(b.map, x, y);
+  const rx = -u.dy;
+  const ry = u.dx;
+  const room = (sgn: number): number => {
+    for (let d = TILE * 0.5; d <= ROOM_MAX; d += TILE * 0.5) {
+      const px = x + rx * d * sgn;
+      const py = y + ry * d * sgn;
+      if (!passableAt(b.map, px, py, mask) || (dry && !dryAt(b.map, px, py))) return d - TILE * 0.5;
+    }
+    return ROOM_MAX;
+  };
+  return [room(-1), room(1)];
+}
+
+/**
+ * Files that fit across the gap at a point (measured across the unit's front, so walls and
+ * water ahead or behind don't squeeze it).
  */
 function maxFilesAt(b: Battle, u: Unit, t: UnitTypeDef, x: number, y: number): number {
-  const c = dryAt(b.map, x, y) ? dryClearanceAt(b.map, x, y) : clearanceAt(b.map, x, y);
-  if (c >= 20) return u.bw;
+  const [l, r] = sideRoom(b, u, t, x, y);
   const [sx] = spacing(t, u.form);
-  const corridor = Math.max(TILE, (c * 2 - 1) * TILE);
-  return Math.max(1, Math.floor(corridor / sx));
+  return Math.max(1, Math.min(u.bw, Math.floor((l + r + TILE * 0.5) / sx)));
 }
 
 /**
@@ -204,7 +225,7 @@ function followPath(b: Battle, u: Unit, t: UnitTypeDef, run: boolean, keepFacing
   const dy = wy - u.ay;
   const d = len(dx, dy);
   const ci = classIndex(moveMask(t));
-  let speed = (run && !FORM[u.form].noRun ? t.run : t.speed) * FORM[u.form].speed * fatigueMult(b, u);
+  let speed = (run && !FORM[u.form].noRun ? t.run : t.speed) * PACE * FORM[u.form].speed * fatigueMult(b, u);
   speed *= Math.max(0.35, terrainSpeed(b.map, u.ax, u.ay, ci));
   if (u.flags & UF.charging) speed *= 1.1;
   // Cohesion: wait for the men if the block has fallen behind the anchor.
@@ -226,10 +247,18 @@ function followPath(b: Battle, u: Unit, t: UnitTypeDef, run: boolean, keepFacing
     u.ay += (dy / d) * step;
     if (!keepFacing) [u.dx, u.dy] = turnToward(u.dx, u.dy, dx / d, dy / d, 0.1);
   }
-  // Squeeze into a column through narrow ground ahead.
+  // Squeeze into a column through narrow ground ahead, and keep the block off a wall or
+  // shore that is close on one side when there is room on the other.
   if (u.form !== 'wedge' && !fleeing) {
     const ahead = Math.min(maxFilesAt(b, u, t, u.ax, u.ay), maxFilesAt(b, u, t, u.ax + u.dx * 8, u.ay + u.dy * 8));
-    u.width = Math.min(u.bw, ahead);
+    u.width = ahead;
+    const [l, r] = sideRoom(b, u, t, u.ax, u.ay);
+    const half = (u.width * spacing(t, u.form)[0]) / 2;
+    const shift = l < half && r > half ? Math.min(half - l, r - half) : r < half && l > half ? -Math.min(half - r, l - half) : 0;
+    if (shift) {
+      u.ax += -u.dy * shift * 0.1;
+      u.ay += u.dx * shift * 0.1;
+    }
   }
   return u.path.length === 0;
 }
@@ -261,7 +290,7 @@ export function steerSoldiers(b: Battle): void {
     }
     let tx: number;
     let ty: number;
-    let maxSpeed = t.speed;
+    let maxSpeed = t.speed * PACE;
     let arrive = true;
     const routing = u.st === 'routing' || u.st === 'shattered';
 
@@ -275,7 +304,7 @@ export function steerSoldiers(b: Battle): void {
         s.hp = -1; // fled the field
         continue;
       }
-      maxSpeed = t.run * 1.05;
+      maxSpeed = t.run * PACE * 1.05;
       arrive = false;
       const atEdge = !u.path.length && dist(u.ax, u.ay, a.edgeX, a.edgeY) < 8;
       if (atEdge) {
@@ -303,7 +332,7 @@ export function steerSoldiers(b: Battle): void {
         const stand = Math.max(t.radius + b.typeOf(eu).radius, reach - 0.35);
         tx = s.x + nx * (d - stand);
         ty = s.y + ny * (d - stand);
-        maxSpeed = d > reach + 3 ? t.run : t.speed;
+        maxSpeed = (d > reach + 3 ? t.run : t.speed) * PACE;
         s.fx = nx;
         s.fy = ny;
       }
@@ -316,7 +345,7 @@ export function steerSoldiers(b: Battle): void {
     let dy = ty - s.y;
     const d = len(dx, dy);
     const running = u.order.run || (u.flags & UF.charging) !== 0;
-    if (!routing && !s.tgt) maxSpeed = running && !FORM[u.form].noRun ? t.run : d > 3 ? t.run * 0.85 : t.speed * FORM[u.form].speed;
+    if (!routing && !s.tgt) maxSpeed = (running && !FORM[u.form].noRun ? t.run : d > 3 ? t.run * 0.85 : t.speed * FORM[u.form].speed) * PACE;
     maxSpeed *= terrainSpeed(map, s.x, s.y, ci) * fatigueMult(b, u);
     if (u.flags & UF.charging) maxSpeed *= 1.1;
     let vx = 0;

@@ -58,10 +58,13 @@ export function RecruitPanel({
               {types.map((t) => {
                 const can = !full && t.cost <= left;
                 return (
-                  <div key={t.id} className={`choice recruit-card ${can ? '' : 'off'}`} title={tip(t)} onClick={() => can && onChange([...units, t.id])}>
+                  <div key={t.id} className={`choice recruit-card ${can ? '' : 'off'} ${t.elite ? 'elite' : ''}`} title={tip(t)} onClick={() => can && onChange([...units, t.id])}>
                     <UnitIcon type={t.id} pal={pal} />
                     <div>
-                      <div>{t.name}</div>
+                      <div>
+                        {t.name}
+                        {t.elite && <span className="tag">Super unit</span>}
+                      </div>
                       <div className="dim" style={{ fontSize: 12 }}>
                         {ROLE_NAMES[roleOf(t)]} · {t.size} {t.mounted || t.cls === 'ele' || t.cls === 'chariot' ? 'riders' : 'men'}
                       </div>

@@ -10,7 +10,7 @@ Up to four friends command ancient armies from **Rome, Greece, Carthage, Persia 
 - **Or serve as a Commander** under a friend's General: their orders show up on your map.
 - **Co-op against the AI, or player vs player.** Every battle has two sides; pick yours in the lobby, and the AI fills empty slots.
 - **Modes:** Thermopylae (480 BC), Last Stand (survive the waves) and Objective battles (Capture & Hold, Defend the Bridge).
-- **Gold modes:** Generals recruit their own armies, then buy reinforcements during the battle.
+- **Gold modes:** Generals recruit their own armies, then buy reinforcements during the battle. Every faction has a **super unit** (Black Spartans, Praetorian Guard, Apple-Bearers, Hannibal's Veterans, Silver Shields).
 - **16-bit soundtrack and effects**, all generated in code; volumes are in Settings.
 
 ## Play

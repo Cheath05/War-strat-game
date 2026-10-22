@@ -25,6 +25,7 @@ An HD-2D (Octopath Traveler / Final Fantasy Resonance style), Total War-like bat
 - `npm run host` builds the client and serves the game on the LAN (port 8090).
 - `npm run cf:dev` runs the Cloudflare Worker locally (http://localhost:8787, no account needed); `npm run deploy` publishes it (needs `npx wrangler login`, which the user approves).
 - `npm run bots -- ABCD 3 --start --scenario thermopylae --seconds 60` plays a room with bots and reports whether they stayed in sync.
+- `npx tsx tools/sprite-sheet.ts out.png 0 greece.spartans rome.hastati` renders units' sprites (key views, 4x, team colour 0) to a PNG for reviewing art without a browser; `#art` in the browser shows a faction's line-up.
 
 ## Rules that must hold
 

@@ -578,13 +578,22 @@ export function lineCost(map: BattleMap, ax: number, ay: number, bx: number, by:
     if (!(map.pass[k]! & mask)) return Infinity;
     const info = TERRAIN[map.ter[k]!]!;
     if (dry && info.wet) return Infinity;
-    cost += d / steps / (info.speed[ci]! * (info.wet ? WET_PENALTY : 1));
+    cost += ((d / steps) * hugCost(map, k)) / (info.speed[ci]! * (info.wet ? WET_PENALTY : 1));
   }
   return cost;
 }
 
 /** Extra cost of wading: paths go round shallows and bog unless crossing them is worth it. */
 export const WET_PENALTY = 0.6;
+
+/**
+ * Extra cost of hugging a wall or cliff: paths keep a few metres off blocked ground where
+ * there is room, so a block of men doesn't scrape along it in a column.
+ */
+export function hugCost(map: BattleMap, k: number): number {
+  const c = map.clear[k]!;
+  return c >= 3 ? 1 : c === 2 ? 1.2 : 1.4;
+}
 
 /** True when the straight line a→b stays on tiles passable for mask (samples every half tile). */
 export function lineClear(map: BattleMap, ax: number, ay: number, bx: number, by: number, mask: number): boolean {

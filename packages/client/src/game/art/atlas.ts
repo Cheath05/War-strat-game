@@ -7,7 +7,7 @@ import { POSES, drawSoldier, type Pose, type View } from './doll';
 import { drawChariot, drawElephant, drawHorseman } from './mounts';
 import { PROPS } from './props';
 
-/** Pixels per metre for sprites: a 32 px frame is 2 m tall, the soldier in it about 1.6 m. */
+/** Pixels per metre for sprites: a 36 px foot frame is 2.25 m tall, the soldier in it about 1.6 m. */
 export const PX_PER_M = 16;
 
 export interface FrameRect {
@@ -34,7 +34,11 @@ export const POSE_INDEX: Record<Pose, number> = Object.fromEntries(POSES.map((p,
 export function spriteKey(t: UnitTypeDef): string {
   const s = t.sprite;
   const kind = t.cls === 'ele' ? 'ele' : t.cls === 'chariot' ? 'chariot' : s.mount ? 'horse' : 'foot';
-  return [kind, s.body, s.armor, s.helmet, s.crest, s.shield, s.weapon, s.cloth, s.cape ?? '', s.beard ? 'b' : '', s.skin ?? '', s.mount ?? '', s.emblem ?? ''].join('.');
+  const tint = Object.entries(s.tint ?? {})
+    .map(([k, v]) => `${k}=${v}`)
+    .sort()
+    .join(',');
+  return [kind, s.body, s.armor, s.helmet, s.crest, s.shield, s.weapon, s.cloth, s.cape ?? '', s.beard ? 'b' : '', s.skin ?? '', s.mount ?? '', s.emblem ?? '', s.greaves ? 'g' : '', tint].join('.');
 }
 
 export function frameKey(sprite: string, view: View, pose: Pose): string {
@@ -42,7 +46,7 @@ export function frameKey(sprite: string, view: View, pose: Pose): string {
 }
 
 function frameSize(kind: string): [number, number] {
-  return kind === 'ele' ? [64, 64] : kind === 'chariot' ? [64, 48] : kind === 'horse' ? [48, 48] : [32, 32];
+  return kind === 'ele' ? [64, 64] : kind === 'chariot' ? [64, 48] : kind === 'horse' ? [48, 48] : [32, 36];
 }
 
 function drawFrame(kind: string, spec: SpriteSpec, view: View, pose: Pose): Px {

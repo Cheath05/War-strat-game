@@ -62,7 +62,7 @@ export const LAST_STAND: ScenarioDef = {
       id: 'map',
       name: 'Battlefield',
       choices: [
-        { id: 'hillfort', name: 'The Hill Fort' },
+        { id: 'hillfort', name: 'The Hill Camp' },
         { id: 'river', name: 'The River Crossing' },
         { id: 'pass', name: 'The Hot Gates' },
       ],

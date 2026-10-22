@@ -50,11 +50,12 @@ export function groupDets(units: string[]): DetDef[] {
 
 /**
  * A balanced army for the budget: about half line infantry, the rest missiles and horse,
- * cycling through the faction's unit types for variety.
+ * cycling through the faction's unit types for variety. Super units are left out: they
+ * are bought on purpose.
  */
 export function defaultArmy(fid: string, gold: number, maxUnits: number): string[] {
   const pool: Record<UnitRole, UnitTypeDef[]> = { line: [], missile: [], horse: [] };
-  for (const t of recruitable(fid)) pool[roleOf(t)].push(t);
+  for (const t of recruitable(fid)) if (!t.elite) pool[roleOf(t)].push(t);
   for (const k of ['line', 'missile', 'horse'] as UnitRole[]) pool[k].sort((a, z) => a.cost - z.cost || (a.id < z.id ? -1 : 1));
   const order: UnitRole[] = ['line', 'line', 'missile', 'line', 'horse', 'line', 'missile', 'horse'];
   const next: Record<UnitRole, number> = { line: 0, missile: 0, horse: 0 };

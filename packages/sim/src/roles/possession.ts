@@ -3,7 +3,7 @@
 // detachment along; the other units keep their places around his unit.
 
 import type { Battle } from '../battle';
-import { sec } from '../constants';
+import { PACE, sec } from '../constants';
 import { clamp, dist, len, norm, turnToward } from '../math/det';
 import { terrainSpeed } from '../map/mapgen';
 import { classIndex } from '../map/pathfind';
@@ -104,7 +104,7 @@ export function updatePossession(b: Battle): void {
     const t = b.typeOf(u);
     const ci = classIndex(moveMask(t));
     const running = p.run && !FORM[u.form].noRun;
-    let speed = (running ? t.run : t.speed) * terrainSpeed(b.map, s.x, s.y, ci) * fatigueMult(b, u);
+    let speed = (running ? t.run : t.speed) * PACE * terrainSpeed(b.map, s.x, s.y, ci) * fatigueMult(b, u);
     if (u.flags & UF.charging) speed *= 1.1;
     // The officer walks where the player steers; in a fight he stands and strikes.
     let vx = p.mx * speed;

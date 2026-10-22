@@ -213,6 +213,8 @@ export interface Army {
   genDead: boolean;
   kills: number;
   losses: number;
+  /** Gold the AI general spends while the AI leads this army (gold modes). */
+  gold: number;
 }
 
 export interface PlayerState {

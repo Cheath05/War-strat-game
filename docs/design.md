@@ -71,13 +71,13 @@ Every battle has two sides. If all of you are on one side, it's co-op against th
   - **Winning:** the Greeks win by holding for 18 minutes, or by breaking the Persians once no more are coming. The Persians win by getting 50 men into the far exit, or by routing every Greek.
   - **In PVP,** human Persians earn 60 gold a minute plus gold for kills, and spend it on reinforcements.
 - **Last Stand (survival).**
-  - Lobby choices: the battlefield (the hill fort, the river crossing or the Hot Gates), your faction and the enemy's.
+  - Lobby choices: the battlefield (the hill camp, the river crossing or the Hot Gates), your faction and the enemy's.
   - Four armies hold the position. Each General recruits with 3,000 gold, and the AI leads any army nobody claims.
   - Ten waves come from the map edges, each bigger than the last: two armies at once from wave 5, three from wave 9.
   - A wave counts as beaten when fewer than one in seven of its troops still fight. Each player then gets 250 + 100 × the wave number in gold, AI-led allies get half their missing men back, and the next wave comes 30 s later. A wave not beaten after three minutes doesn't hold back the next.
   - Your score is the number of waves beaten. Beating all ten wins.
 - **Objective battles** (PVE or PVP):
-  - **Capture & Hold:** three points on the plains, the river crossing or the hill fort. Each point held scores a victory point a second. 1,200 wins; otherwise most points after 20 minutes. 4,000 gold per army, plus 60 a minute.
+  - **Capture & Hold:** three points on the plains, the river crossing or the hill camp. Each point held scores a victory point a second. 1,200 wins; otherwise most points after 20 minutes. 4,000 gold per army, plus 60 a minute.
   - **Defend the Bridge:** the attackers must get 60 men across the river, by the bridge or the fords, within 15 minutes. The defenders have 3,500 gold per army and the attackers 5,500. One AI attacker goes for the bridge and one marches round by the north ford.
 
 ## Economy (Last Stand, Objective battles, and the Persian side in PVP Thermopylae)
@@ -86,6 +86,9 @@ Every battle has two sides. If all of you are on one side, it's co-op against th
 - **During the battle:** earn a fifth of each fallen enemy's price, steady income in some modes, and a bonus for each Last Stand wave beaten. Spend it on:
   - new units, which march in from your edge of the map (the Reinforce panel);
   - topping up worn-down units that are out of combat near your General or your map edge (Replenish, at a quarter over the unit's price per man).
+- **AI generals spend too.** An army the AI leads keeps its own purse (what its starting army didn't cost, plus income, kill bounties and wave bonuses). Every ten seconds its general refills units missing a quarter of their men and buys units to keep about half the army line infantry, and its faction's super unit when it can afford a quarter over the price.
+- **Super units:** one per faction (Black Spartans, Praetorian Guard, Apple-Bearers, Hannibal's Veterans, Silver Shields). Top stats, terror, the Inspire ability, 1,600–1,800 gold. Never picked by "Balanced army"; they lead the last three waves of Last Stand (one in the eighth and ninth, one per group in the final wave). Drawn 12% larger, with gold trim, a gold glint and a gold-edged banner.
+- **Pace:** every unit moves 30% faster than its listed speed (`PACE` in the sim), so armies close sooner.
 - **Strength** (lobby setting, per side): ×1, ×1.5, ×2, ×3 or ×5 on every soldier's health and damage, so at ×2 a soldier fights like two. A handicap for co-op against the AI or uneven PVP.
 - **Let the AI lead** (battle menu): a player can hand their army or detachment to the AI and take it back; bots do this by default.
 - **Fog of war** (lobby switch): enemies show only within sight of your troops: 130 m on foot, 160 m mounted, and 40 m for enemies in forest. Only the view is fogged: the AI sees everything.

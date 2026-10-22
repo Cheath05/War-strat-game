@@ -1,9 +1,10 @@
 // The paper-doll soldier generator. Every unit type's sprite spec (helmet, crest, shield,
 // weapon, armour, cloth, skin) is drawn procedurally in three views (front, back, side) and
-// eleven poses into a 32x32 indexed frame, then shaded and outlined. Chibi proportions:
-// a big head about 2.5 heads tall, like Octopath Traveler / Final Fantasy Resonance.
+// eleven poses into a 32x36 indexed frame (room above the head for tall crests), then
+// shaded and outlined. Chibi proportions: a big head about 2.5 heads tall, like Octopath
+// Traveler / Final Fantasy Resonance.
 
-import type { SpriteSpec } from '@pl/sim';
+import type { Material, SpriteSpec, TintPart } from '@pl/sim';
 import { P, R, mid, dark, light } from './palette';
 import { Px } from './px';
 
@@ -15,7 +16,7 @@ interface Look {
   skin: number;
   cloth: number;
   armor: number;
-  armorPattern: 'plain' | 'mail' | 'scale' | 'muscle' | 'linen';
+  armorPattern: 'plain' | 'mail' | 'scale' | 'muscle' | 'linen' | 'segmentata';
   helm: number;
   crest: number;
   shieldFace: number;
@@ -23,11 +24,38 @@ interface Look {
   emblem: number;
   cape: number;
   hair: number;
+  /** Greaves on the shins (0: bare legs). */
+  greaves: number;
+  /** Gold (or other) edging on armour, helmet and shield (0: none). */
+  trim: number;
 }
 
+const MATERIALS: Record<Material, number> = {
+  team: R.team,
+  team2: R.team2,
+  bronze: R.bronze,
+  iron: R.iron,
+  silver: R.silver,
+  steel: R.steel,
+  gold: R.gold,
+  red: R.red,
+  black: R.black,
+  white: R.white,
+  purple: R.purple,
+  linen: R.linen,
+  leather: R.leather,
+};
+
+/** Shields of these get a glint of polished metal. */
+const METALS = new Set<number>([R.bronze, R.iron, R.silver, R.steel, R.gold]);
+
 function look(s: SpriteSpec): Look {
+  const tint = (part: TintPart, usual: number): number => {
+    const m = s.tint?.[part];
+    return m ? MATERIALS[m] : usual;
+  };
   const skin = s.skin === 'tan' || s.skin === 'brown' ? R.skinTan : s.skin === 'dark' ? R.skinDark : R.skinOlive;
-  const cloth: number = s.cloth === 'linen' ? R.linen : s.cloth === 'dark' ? R.darkCloth : R.team;
+  const cloth = tint('cloth', s.cloth === 'linen' ? R.linen : s.cloth === 'dark' ? R.darkCloth : R.team);
   let armor: number = cloth;
   let armorPattern: Look['armorPattern'] = 'plain';
   switch (s.armor) {
@@ -51,23 +79,48 @@ function look(s: SpriteSpec): Look {
     case 'leather':
       armor = R.leather;
       break;
+    case 'segmentata':
+      armor = R.silver;
+      armorPattern = 'segmentata';
+      break;
   }
+  armor = tint('armor', armor);
   const clothHelm = s.helmet === 'tiara' || s.helmet === 'cap' || s.helmet === 'turban' || s.helmet === 'hood' || s.helmet === 'kausia';
-  const helm = s.helmet === 'crown' ? R.gold : s.helmet === 'wolfpelt' ? R.horse : clothHelm ? (s.cloth === 'team' ? R.team2 : R.team) : s.helmet === 'pilos' ? R.leather : R.bronze;
-  const shieldFace = s.shield === 'spara' ? R.wicker : s.shield === 'pelte' ? R.wicker : s.shield === 'small' ? R.bronze : R.team;
-  const shieldRim = s.shield === 'aspis' ? R.bronze : s.shield === 'scutum' || s.shield === 'thureos' || s.shield === 'oval' ? R.team2 : R.leather;
+  const helm = tint(
+    'helm',
+    s.helmet === 'crown'
+      ? R.gold
+      : s.helmet === 'wolfpelt'
+        ? R.horse
+        : s.helmet === 'lionpelt'
+          ? R.wicker
+          : s.helmet === 'galea'
+            ? R.iron
+            : clothHelm
+              ? s.cloth === 'team'
+                ? R.team2
+                : R.team
+              : s.helmet === 'pilos'
+                ? R.leather
+                : R.bronze,
+  );
+  const trim = s.tint?.trim ? MATERIALS[s.tint.trim] : 0;
+  const shieldFace = tint('shield', s.shield === 'spara' ? R.wicker : s.shield === 'pelte' ? R.wicker : s.shield === 'small' ? R.bronze : R.team);
+  const shieldRim = trim || (s.shield === 'aspis' || s.shield === 'scutum' ? R.bronze : s.shield === 'thureos' || s.shield === 'oval' ? R.team2 : R.leather);
   return {
     skin,
     cloth,
     armor,
     armorPattern,
     helm,
-    crest: R.team,
+    crest: tint('crest', R.team),
     shieldFace,
     shieldRim,
-    emblem: s.emblem === 'lambda' || s.emblem === 'owl' ? R.team2 : R.gold,
-    cape: s.cape === 'red' ? R.red : R.team,
+    emblem: tint('emblem', s.emblem === 'lambda' || s.emblem === 'owl' ? R.team2 : R.gold),
+    cape: tint('cape', s.cape === 'red' ? R.red : R.team),
     hair: R.hair,
+    greaves: s.greaves ? (armorPattern === 'muscle' || armorPattern === 'segmentata' ? armor : R.bronze) : 0,
+    trim,
   };
 }
 
@@ -110,7 +163,7 @@ function frameOf(pose: Pose): Frame {
 }
 
 /** Draws one soldier frame into px with its feet at (cx, footY). */
-export function drawSoldier(px: Px, spec: SpriteSpec, view: View, pose: Pose, cx = 16, footY = 30, riding = false): void {
+export function drawSoldier(px: Px, spec: SpriteSpec, view: View, pose: Pose, cx = 16, footY = 34, riding = false): void {
   const L = look(spec);
   if (pose === 'dead') {
     drawDead(px, spec, L, cx, footY);
@@ -135,6 +188,10 @@ function legs(px: Px, L: Look, cx: number, y0: number, f: Frame, side: boolean):
     px.rect(cx - 2 + a, y0 + 29, 4, 1, sandal);
     px.rect(cx - 1 - a, y0 + 24, 2, 5, dark(L.skin));
     px.rect(cx - 2 - a, y0 + 29, 4, 1, dark(R.leather), true);
+    if (L.greaves) {
+      px.rect(cx - 1 + a, y0 + 25, 2, 4, mid(L.greaves));
+      px.rect(cx - 1 - a, y0 + 25, 2, 4, dark(L.greaves), true);
+    }
     return;
   }
   const la = Math.max(0, -f.legA);
@@ -143,6 +200,14 @@ function legs(px: Px, L: Look, cx: number, y0: number, f: Frame, side: boolean):
   px.rect(cx - 4, y0 + 29 - la, 3, 1, sandal);
   px.rect(cx + 1, y0 + 24, 2, 5 - lb, skin);
   px.rect(cx + 1, y0 + 29 - lb, 3, 1, sandal);
+  if (L.greaves) {
+    px.rect(cx - 3, y0 + 25, 2, 4 - la, mid(L.greaves));
+    px.rect(cx + 1, y0 + 25, 2, 4 - lb, mid(L.greaves));
+    if (L.trim) {
+      px.hline(cx - 3, cx - 2, y0 + 25, mid(L.trim), true);
+      px.hline(cx + 1, cx + 2, y0 + 25, mid(L.trim), true);
+    }
+  }
 }
 
 function skirt(px: Px, L: Look, cx: number, y0: number, wide: number): void {
@@ -155,7 +220,7 @@ function torso(px: Px, L: Look, spec: SpriteSpec, cx: number, y0: number, back: 
   const a = mid(L.armor);
   px.rect(cx - 4, y0 + 15, 8, 6, a);
   px.rect(cx - 5, y0 + 15, 10, 2, a); // shoulders
-  if (back && L.armor !== L.cloth) {
+  if (back && L.armor !== L.cloth && L.armorPattern !== 'segmentata') {
     // From behind, the tunic shows between the shoulder straps and below the armour.
     px.rect(cx - 3, y0 + 17, 6, 4, mid(L.cloth));
     px.rect(cx - 5, y0 + 15, 2, 2, mid(L.cloth));
@@ -174,11 +239,37 @@ function torso(px: Px, L: Look, spec: SpriteSpec, cx: number, y0: number, back: 
     // Linothorax with coloured shoulder flaps.
     px.rect(cx - 5, y0 + 15, 2, 2, mid(R.team));
     px.rect(cx + 3, y0 + 15, 2, 2, mid(R.team));
+  } else if (L.armorPattern === 'segmentata') {
+    // Lorica segmentata: hoops of plate round the body, plates over the shoulders, brass buckles.
+    px.hline(cx - 4, cx + 3, y0 + 17, dark(L.armor), true);
+    px.hline(cx - 4, cx + 3, y0 + 19, dark(L.armor), true);
+    px.hline(cx - 5, cx - 3, y0 + 16, dark(L.armor), true);
+    px.hline(cx + 2, cx + 4, y0 + 16, dark(L.armor), true);
+    if (!back) {
+      px.set(cx - 2, y0 + 18, mid(R.gold), true);
+      px.set(cx + 1, y0 + 18, mid(R.gold), true);
+    }
   }
   // Belt.
   px.hline(cx - 4, cx + 3, y0 + 21, mid(R.leather));
   if (spec.body === 'heavy') px.set(cx, y0 + 21, mid(R.gold), true);
   if (spec.body === 'robe') px.rect(cx - 5, y0 + 21, 10, 6, mid(L.cloth));
+  if (L.trim) {
+    // Gilded edges: a gold neckline, medallions on the shoulders and a gold belt.
+    px.hline(cx - 2, cx + 1, y0 + 15, mid(L.trim), true);
+    px.rect(cx - 5, y0 + 15, 2, 2, mid(L.trim), true);
+    px.rect(cx + 3, y0 + 15, 2, 2, mid(L.trim), true);
+    px.hline(cx - 4, cx + 3, y0 + 21, mid(L.trim), true);
+    if (!back) px.hline(cx - 1, cx, y0 + 21, light(L.trim), true);
+  }
+}
+
+/** The legionary's belt apron: leather straps with brass studs. */
+function apron(px: Px, cx: number, y0: number): void {
+  for (const x of [cx - 2, cx, cx + 2]) {
+    px.vline(x, y0 + 22, y0 + 24, dark(R.leather), true);
+    px.set(x, y0 + 23, mid(R.gold), true);
+  }
 }
 
 function head(px: Px, L: Look, spec: SpriteSpec, cx: number, y0: number, view: View): void {
@@ -232,7 +323,53 @@ function helmet(px: Px, L: Look, spec: SpriteSpec, cx: number, y0: number, view:
         px.rect(cx + 2, y0 + 12, 2, 2, mid(L.skin));
         px.set(cx - 5, y0 + 14, hd, true);
       }
-      px.hline(cx - 5, cx + 4, y0 + 7, light(L.helm), true);
+      px.hline(cx - 5, cx + 4, y0 + 7, L.trim ? mid(L.trim) : light(L.helm), true);
+      return;
+    }
+    case 'galea': {
+      // Imperial Gallic helmet: a rounded bowl, a brow ridge, hinged cheek guards and a
+      // broad neck guard at the back.
+      px.ellipse(cx - 0.5, y0 + 8.5, 5, 3.8, h);
+      px.rect(cx - 5, y0 + 8, 10, 2, h);
+      px.hline(cx - 5, cx + 4, y0 + 9, L.trim ? mid(L.trim) : light(L.helm), true);
+      if (view === 0) {
+        px.rect(cx - 5, y0 + 10, 2, 5, h);
+        px.rect(cx + 3, y0 + 10, 2, 5, h);
+        px.set(cx - 4, y0 + 12, L.trim ? mid(L.trim) : light(L.helm), true);
+        px.set(cx + 3, y0 + 12, L.trim ? mid(L.trim) : light(L.helm), true);
+      } else if (view === 2) {
+        px.rect(cx - 1, y0 + 10, 2, 4, h);
+        px.rect(cx - 7, y0 + 11, 4, 2, h);
+        px.set(cx - 8, y0 + 12, h);
+      } else {
+        px.rect(cx - 5, y0 + 10, 10, 3, h);
+        px.hline(cx - 6, cx + 5, y0 + 13, h);
+      }
+      px.rect(cx - 1, y0 + 4, 2, 1, L.trim ? mid(L.trim) : h);
+      return;
+    }
+    case 'lionpelt': {
+      // A lion's head worn as a hood: ears and eyes above the brow, the mane round the face,
+      // the pelt hanging down the back.
+      const mane = mid(R.horse);
+      px.ellipse(cx - 0.5, y0 + 8, 5, 3.5, h);
+      px.set(cx - 4, y0 + 4, h);
+      px.set(cx + 3, y0 + 4, h);
+      if (view === 0) {
+        px.set(cx - 2, y0 + 7, P.eye, true);
+        px.set(cx + 1, y0 + 7, P.eye, true);
+        px.hline(cx - 1, cx, y0 + 9, light(L.helm), true);
+        px.rect(cx - 6, y0 + 8, 2, 8, mane);
+        px.rect(cx + 4, y0 + 8, 2, 8, mane);
+      } else if (view === 2) {
+        px.set(cx + 2, y0 + 7, P.eye, true);
+        px.rect(cx + 3, y0 + 8, 2, 1, h);
+        px.rect(cx - 6, y0 + 7, 4, 9, mane);
+      } else {
+        px.rect(cx - 6, y0 + 8, 12, 4, mane);
+        px.rect(cx - 5, y0 + 12, 10, 9, h);
+        for (let y = y0 + 13; y < y0 + 21; y += 2) px.hline(cx - 4, cx + 3, y, dark(L.helm), true);
+      }
       return;
     }
     case 'attic':
@@ -318,41 +455,81 @@ function helmet(px: Px, L: Look, spec: SpriteSpec, cx: number, y0: number, view:
   }
 }
 
+// Horsehair crests as pixel templates: c is the crest colour (shaded by the light pass),
+// D and L its dark and light strands. Front views also serve for the back.
+const CREST_ART: Record<string, { front: string[]; side: string[]; fx: number; fy: number; sx: number; sy: number }> = {
+  // Sparta's crest: tall and bushy, front to back, its tail falling down the neck.
+  great: {
+    front: ['..cccc..', '.cLLccc.', 'cLLcDccc', 'ccDccDcc', 'cDccDccD', '.cDccDc.', '..cDcc..', '...cc...'],
+    fx: -4,
+    fy: -3,
+    side: [
+      '....cccc.....',
+      '..ccLLLccc...',
+      '.cLLccDccDc..',
+      'cLccDccDcccc.',
+      'ccDccDccDccc.',
+      'cDccDccDccc..',
+      'cDcDcc.ccc...',
+      'cDcc...cc....',
+      'cDc..........',
+      'ccD..........',
+      '.cD..........',
+      '.cc..........',
+      '..c..........',
+    ],
+    sx: -8,
+    sy: -3,
+  },
+  // A smaller front-to-back crest (hoplites and others).
+  long: {
+    front: ['.ccc.', 'cLccc', 'cDcDc', '.cDc.', '..c..'],
+    fx: -3,
+    fy: 0,
+    side: ['...cccc...', '.ccLLccc..', 'cLccDccDc.', 'cDcDccc...', 'cDc..cc...', 'cc........', '.c........'],
+    sx: -7,
+    sy: 0,
+  },
+  // Side to side, like a centurion's: wide from the front, thin in profile.
+  transverse: {
+    front: ['..ccccccccc..', '.cLLLLLLLLLc.', 'cLcDcDcDcDccc', 'ccDcDcDcDcDcc', '..cc.....cc..', '......c......'],
+    fx: -7,
+    fy: -1,
+    side: ['.cc.', 'cLcc', 'cDcc', 'ccDc', '.cc.', '..c.'],
+    sx: -2,
+    sy: -1,
+  },
+  // An upright tuft on the crown (Roman legionaries).
+  plume: {
+    front: ['.cc.', 'cLcc', 'cLDc', 'ccDc', '.cc.', '.c..'],
+    fx: -2,
+    fy: -2,
+    side: ['.ccc.', 'cLLcc', 'cLcDc', 'cDcDc', '.cDc.', '..cc.'],
+    sx: -3,
+    sy: -2,
+  },
+};
+
 function crest(px: Px, L: Look, spec: SpriteSpec, cx: number, y0: number, view: View): void {
   const c = mid(L.crest);
-  switch (spec.crest) {
-    case 'none':
-      return;
-    case 'transverse':
-      // Side to side: wide from the front, thin in profile.
-      if (view === 2) px.rect(cx - 2, y0 + 1, 3, 4, c);
-      else {
-        px.rect(cx - 7, y0 + 2, 13, 2, c);
-        px.rect(cx - 6, y0 + 1, 11, 1, c);
-        px.rect(cx - 2, y0 + 4, 3, 1, c);
-      }
-      return;
-    case 'long':
-    case 'plume':
-      // Front to back: tall from the front, long in profile.
-      if (view === 2) {
-        px.rect(cx - 5, y0 + 2, 9, 2, c);
-        px.rect(cx - 6, y0 + 4, 3, 4, c);
-      } else {
-        px.rect(cx - 2, y0 + 0, 3, 5, c);
-        if (spec.crest === 'plume') px.rect(cx - 1, y0 + 5, 2, view === 1 ? 6 : 0, c);
-      }
-      return;
-    case 'feathers':
-      // Three tall feathers (hastati): dark and team-coloured.
-      if (view === 2) {
-        for (let i = 0; i < 3; i++) px.vline(cx - 2 + i, y0 + 1, y0 + 4, i === 1 ? c : mid(R.black));
-      } else {
-        px.vline(cx - 3, y0 + 1, y0 + 4, mid(R.black));
-        px.vline(cx - 1, y0 + 0, y0 + 4, c);
-        px.vline(cx + 1, y0 + 1, y0 + 4, mid(R.black));
-      }
-      return;
+  const key = { c, D: dark(L.crest), L: light(L.crest) };
+  const art = CREST_ART[spec.crest];
+  if (art) {
+    if (view === 2) px.stamp(art.side, cx + art.sx, y0 + art.sy, key);
+    else px.stamp(art.front, cx + art.fx, y0 + art.fy, key, view === 1);
+    // From behind, the great crest's tail falls down the back of the helmet.
+    if (spec.crest === 'great' && view === 1) px.stamp(['cD', 'Dc', 'cD', 'Dc', 'cD', 'Dc', 'cc', '.c'], cx - 1, y0 + 5, key);
+    return;
+  }
+  if (spec.crest === 'feathers') {
+    // Three tall feathers (hastati): dark and team-coloured.
+    if (view === 2) {
+      for (let i = 0; i < 3; i++) px.vline(cx - 2 + i, y0 + 1, y0 + 4, i === 1 ? c : mid(R.black));
+    } else {
+      px.vline(cx - 3, y0 + 1, y0 + 4, mid(R.black));
+      px.vline(cx - 1, y0 + 0, y0 + 4, c);
+      px.vline(cx + 1, y0 + 1, y0 + 4, mid(R.black));
+    }
   }
 }
 
@@ -379,12 +556,15 @@ function shield(px: Px, L: Look, spec: SpriteSpec, sx: number, sy: number, view:
   const rim = mid(L.shieldRim);
   switch (spec.shield) {
     case 'aspis':
-      px.ellipse(sx, sy, 6, view === 2 ? 6 : 6, rim);
+      px.ellipse(sx, sy, 6, 6, rim);
       px.ellipse(sx, sy, 4.8, 4.8, face);
-      if (front) emblem(px, L, spec, sx, sy);
+      if (front) {
+        emblem(px, L, spec, sx, sy);
+        if (METALS.has(L.shieldFace)) px.set(sx - 3, sy - 3, P.shine, true);
+      }
       break;
     case 'scutum':
-      // Tall curved rectangle with a metal boss.
+      // Tall curved rectangle with a brass edge and an iron boss.
       px.rect(sx - 4, sy - 7, 9, 15, rim);
       px.rect(sx - 3, sy - 6, 7, 13, face);
       px.set(sx - 4, sy - 7, 0);
@@ -392,13 +572,12 @@ function shield(px: Px, L: Look, spec: SpriteSpec, sx: number, sy: number, view:
       px.set(sx - 4, sy + 7, 0);
       px.set(sx + 4, sy + 7, 0);
       if (front) {
-        px.rect(sx - 1, sy - 1, 3, 3, mid(R.iron));
-        px.set(sx, sy, P.shine, true);
-        if (spec.emblem === 'eagle') {
-          px.hline(sx - 3, sx - 2, sy - 4, mid(R.gold), true);
-          px.hline(sx + 2, sx + 3, sy - 4, mid(R.gold), true);
-          px.hline(sx - 3, sx - 2, sy + 4, mid(R.gold), true);
-          px.hline(sx + 2, sx + 3, sy + 4, mid(R.gold), true);
+        if (spec.emblem === 'wings') {
+          // Jupiter's thunderbolts and wings, radiating from the boss.
+          px.stamp(SCUTUM_WINGS, sx - 3, sy - 6, { G: mid(L.emblem), B: mid(R.iron), S: P.shine });
+        } else {
+          px.rect(sx - 1, sy - 1, 3, 3, mid(R.iron));
+          px.set(sx, sy, P.shine, true);
         }
       }
       break;
@@ -430,12 +609,16 @@ function shield(px: Px, L: Look, spec: SpriteSpec, sx: number, sy: number, view:
   }
 }
 
+const SCUTUM_WINGS = ['.......', '...G...', '..G....', '...G...', 'G..G..G', '.GGBGG.', '..BSB..', '.GGBGG.', 'G..G..G', '...G...', '....G..', '...G...', '.......'];
+
 function emblem(px: Px, L: Look, spec: SpriteSpec, sx: number, sy: number): void {
   const e = mid(L.emblem);
   switch (spec.emblem) {
     case 'lambda':
-      px.line(sx - 2, sy + 2, sx, sy - 2, e, true);
-      px.line(sx, sy - 2, sx + 2, sy + 2, e, true);
+      // Sparta's Λ from rim to rim, with a heavier right stroke.
+      px.line(sx, sy - 4, sx - 3, sy + 3, e, true);
+      px.line(sx, sy - 4, sx + 3, sy + 3, e, true);
+      px.line(sx + 1, sy - 3, sx + 4, sy + 2, e, true);
       break;
     case 'owl':
       px.set(sx - 1, sy - 1, e, true);
@@ -556,6 +739,7 @@ function drawFront(px: Px, spec: SpriteSpec, L: Look, f: Frame, cx: number, y0: 
   cape(px, L, spec, cx, y, 0);
   skirt(px, L, cx, y, spec.body === 'heavy' ? 1 : 0);
   torso(px, L, spec, cx, y, false);
+  if (L.armorPattern === 'segmentata') apron(px, cx, y);
   // Arms: weapon arm on the viewer's left, shield arm on the right.
   const armUp = f.arm === 1 ? -4 : 0;
   px.rect(cx - 6, y + 15 + armUp, 2, 5, mid(L.skin));
