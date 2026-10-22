@@ -59,9 +59,9 @@ export function meleeStrike(b: Battle, s: Soldier, u: Unit, t: UnitTypeDef, e: S
   const rel = attackAngle(s.x, s.y, e, eu);
   const fa = FORM[u.form];
   const fe = FORM[eu.form];
-  let atk = t.atk + fa.atk + (u.buff > 0 ? 6 : 0) + (u.possBy ? 4 : 0) + aiEdge(b, u) - fatiguePenalty(b, u);
+  let atk = t.atk + u.up.atk + fa.atk + (u.buff > 0 ? 6 : 0) + (u.possBy ? 4 : 0) + aiEdge(b, u) - fatiguePenalty(b, u);
   if (s.chg > 0) atk += ((t.charge + fa.chargeBonus) * s.chg) / CHARGE_BONUS_TICKS;
-  let def = et.def + fe.def + aiEdge(b, eu) - fatiguePenalty(b, eu);
+  let def = et.def + eu.up.def + fe.def + aiEdge(b, eu) - fatiguePenalty(b, eu);
   if (rel === 0) def += (et.shield >= 30 ? 5 : 0) + fe.frontDef;
   else if (rel === 1) atk += 6;
   else atk += 12;
@@ -78,7 +78,7 @@ export function meleeStrike(b: Battle, s: Soldier, u: Unit, t: UnitTypeDef, e: S
     if (rel === 0 && et.shield > 0) b.emit({ k: 'block', s: e.id, x: e.x, y: e.y });
     return;
   }
-  const armor = clamp(et.armor - (rel === 2 ? 10 : 0), 0, 90);
+  const armor = clamp(et.armor + eu.up.armor - (rel === 2 ? 10 : 0), 0, 90);
   const roll = randRange(rng, armor * 0.5, armor) / 100;
   let dmg = t.dmg * (1 - roll) + t.ap;
   if (large) dmg += t.bonusLarge * 0.5;

@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { ORDER_NAMES, TEAM_COLORS, recruitable, unitType, type AllyPlan, type DetOrder, type FormationKind } from '@pl/sim';
+import { ORDER_NAMES, RANK_NAMES, TEAM_COLORS, recruitable, unitType, type AllyPlan, type DetOrder, type FormationKind } from '@pl/sim';
 import { useStore } from '../app/store';
 import type { GameSession } from '../game/session';
 import type { AllyCard, DetCard, UnitCard } from '../game/hud';
@@ -300,6 +300,11 @@ function Card({ u, session, color }: { u: UnitCard; session: GameSession; color:
       <UnitIcon type={u.type} pal={army?.pal ?? 0} />
       {u.maxAmmo > 0 && <span className="ammo">{u.ammo}</span>}
       {u.group > 0 && <span className="badge">{u.group}</span>}
+      {u.vet > 0 && (
+        <span className="chevrons" title={`${RANK_NAMES[u.vet]} (veterancy ${u.vet})`}>
+          {'^'.repeat(u.vet)}
+        </span>
+      )}
       {u.led && (
         <span className="badge" style={{ left: 3, right: 'auto', top: 14 }}>
           ♛

@@ -6,6 +6,7 @@ import { TEAM_COLORS } from './data/colors';
 import { budgetFor, faction, scenarioChoices, scenarioDef, unitType } from './data/registry';
 import type { ArmySlotDef, DetDef, ScenarioDef, ZoneDef } from './data/types';
 import { armyCost, groupDets } from './economy/armies';
+import { unitBonus, type Upgrades } from './economy/upgrades';
 import { clamp, norm } from './math/det';
 import { seedRng } from './math/rng';
 import { buildMap, dryAt, passableAt, type BattleMap } from './map/mapgen';
@@ -39,6 +40,8 @@ export interface ArmySetup {
   deploy: string;
   ai: string;
   pal?: number;
+  /** Campaign upgrades bought for this army's arms. */
+  upgrades?: Upgrades;
 }
 
 export interface BattleSetup {
@@ -294,6 +297,10 @@ interface PlacedUnit {
   det: number;
   lateral: number;
   forward: number;
+  /** Men to spawn, and the campaign unit's rank and roster id. */
+  n: number;
+  vet: number;
+  ref: string;
 }
 
 /** Creates an army with its general and detachments laid out in the zone; gold is its AI purse. */
@@ -370,11 +377,13 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
     const n = sizeOf(type) - 1;
     return frontageOf(t, t.forms[0]!, defaultWidth(n, t)) + 2;
   };
-  // Each detachment's lane is as wide as its widest row.
+  // Each detachment's lane is as wide as its widest row. Units are kept with their index in
+  // the detachment, for a campaign unit's strength, rank and roster id.
   const lanes = ordered.map(({ def, det }) => {
-    const missile = def.units.filter((t) => isScreen(t));
-    const main = def.units.filter((t) => !isScreen(t));
-    const rowW = (row: string[]): number => row.reduce((s, t) => s + frontage(t), 0) + Math.max(0, row.length - 1) * GAP;
+    const all = def.units.map((t, k) => ({ t, k }));
+    const missile = all.filter((x) => isScreen(x.t));
+    const main = all.filter((x) => !isScreen(x.t));
+    const rowW = (row: { t: string }[]): number => row.reduce((s, x) => s + frontage(x.t), 0) + Math.max(0, row.length - 1) * GAP;
     return { def, det, missile, main, width: Math.max(rowW(missile), rowW(main), 4) };
   });
   let total = lanes.reduce((s, l) => s + l.width, 0) + Math.max(0, lanes.length - 1) * GAP * 2;
@@ -388,12 +397,14 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
     let cursor = -total / 2;
     const fwd = twoLines ? (li === 0 ? lineDepth / 2 : -lineDepth / 2) : 0;
     for (const lane of line) {
-      const place = (row: string[], forward: number): void => {
-        const rowW = row.reduce((s, t) => s + frontage(t), 0) + Math.max(0, row.length - 1) * GAP;
+      const place = (row: { t: string; k: number }[], forward: number): void => {
+        const rowW = row.reduce((s, x) => s + frontage(x.t), 0) + Math.max(0, row.length - 1) * GAP;
         let c = cursor + (lane.width - rowW) / 2;
-        for (const t of row) {
+        for (const { t, k } of row) {
           const fw = frontage(t);
-          placed.push({ type: t, det: lane.det.id, lateral: c + fw / 2, forward });
+          const str = lane.def.str?.[k];
+          const n = str === undefined ? sizeOf(t) : Math.max(1, Math.round(sizeOf(t) * Math.min(1, str)));
+          placed.push({ type: t, det: lane.det.id, lateral: c + fw / 2, forward, n, vet: lane.def.vet?.[k] ?? 0, ref: lane.def.ref?.[k] ?? '' });
           c += fw + GAP;
         }
       };
@@ -404,16 +415,17 @@ export function spawnArmy(w: World, map: BattleMap, a: ArmySetup, zone: ZoneDef,
   });
 
   const genType = a.general ?? fac.general;
-  placed.push({ type: genType, det: guardDet.id, lateral: 0, forward: (twoLines ? -lineDepth / 2 : 0) - 16 });
+  placed.push({ type: genType, det: guardDet.id, lateral: 0, forward: (twoLines ? -lineDepth / 2 : 0) - 16, n: sizeOf(genType), vet: 0, ref: '' });
 
   for (const pu of placed) {
     let lx = clamp(cx + rx * pu.lateral + fx * pu.forward, zone.x0, zone.x1);
     let ly = clamp(cy + ry * pu.lateral + fy * pu.forward, zone.y0, zone.y1);
     // Never in the water, a wall or on top of another unit: the nearest good ground instead.
-    [lx, ly] = findSpot(map, pu.type, sizeOf(pu.type), lx, ly, fx, fy, zone, w.units);
+    [lx, ly] = findSpot(map, pu.type, pu.n, lx, ly, fx, fy, zone, w.units);
     const det = w.dets.find((d) => d.id === pu.det)!;
     const isGen = pu.det === guardDet.id;
-    const u = spawnUnit(w, army, det, pu.type, lx, ly, fx, fy, sizeOf(pu.type), map);
+    const up = a.upgrades || pu.vet ? unitBonus(pu.type, a.upgrades, pu.vet) : undefined;
+    const u = spawnUnit(w, army, det, pu.type, lx, ly, fx, fy, pu.n, map, { vet: pu.vet, ref: pu.ref, up });
     if (isGen) {
       army.genUnit = u.id;
       army.genSoldier = u.cap;
@@ -544,7 +556,14 @@ const RING: [number, number][] = [
 ];
 
 /** Creates a unit in formation with its anchor at (x, y) facing (fx, fy). */
-export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x: number, y: number, fx: number, fy: number, n: number, map?: BattleMap): Unit {
+/** A campaign unit's extras: its veterancy, roster id and bonus. */
+export interface UnitExtras {
+  vet?: number;
+  ref?: string;
+  up?: Unit['up'];
+}
+
+export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x: number, y: number, fx: number, fy: number, n: number, map?: BattleMap, extras: UnitExtras = {}): Unit {
   const t = unitType(type);
   const mask = t.cls === 'ele' || t.cls === 'chariot' ? MOVE.large : t.mounted ? MOVE.horse : MOVE.foot;
   if (map) [x, y] = nearestStandable(map, x, y, mask);
@@ -596,6 +615,9 @@ export function spawnUnit(w: World, army: Army, det: Detachment, type: string, x
     enemyD: 1e9,
     calm: 0,
     born: w.tick,
+    up: extras.up ? { ...extras.up } : { atk: 0, def: 0, armor: 0, morale: 0 },
+    vet: extras.vet ?? 0,
+    ref: extras.ref ?? '',
   };
   const rx = -fy;
   const ry = fx;

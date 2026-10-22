@@ -1325,6 +1325,18 @@ section > .label:first-child::after {
   font-size: 9px;
   color: var(--text-soft);
 }
+/* Veterancy: one gold chevron per rank, stacked down the right edge. */
+.ucard .chevrons {
+  position: absolute;
+  top: 14px;
+  right: 4px;
+  width: 8px;
+  font-size: 10px;
+  line-height: 5px;
+  word-break: break-all;
+  color: var(--gold);
+  text-align: center;
+}
 .hud-orders {
   position: absolute;
   right: 10px;

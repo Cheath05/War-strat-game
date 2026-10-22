@@ -203,7 +203,7 @@ function land(b: Battle, p: Projectile): void {
     b.emit({ k: 'block', s: e.id, x: e.x, y: e.y });
     return;
   }
-  const armor = Math.min(90, et.armor);
+  const armor = Math.min(90, et.armor + eu.up.armor);
   const roll = randRange(w.rng, armor * 0.5, armor) / 100;
   let dmg = p.dmg * (1 - roll) + p.ap;
   if (isLarge(et)) dmg += p.vsLarge;

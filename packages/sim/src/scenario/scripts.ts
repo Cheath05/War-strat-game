@@ -25,6 +25,34 @@ function broken(b: Battle, a: Army | undefined): boolean {
   return !b.world.units.some((u) => u.army === a.id && u.st !== 'gone' && u.st !== 'routing' && u.st !== 'shattered');
 }
 
+/**
+ * Campaign battles: the battle's moments are announced on time, and armies that came later in
+ * history march on when their hour comes (until then their side can't be broken).
+ */
+registerScenarioScript('campaign', (b: Battle) => {
+  const w = b.world;
+  const t = w.scenario.t;
+  (b.scenario.events ?? []).forEach((e, k) => {
+    if (t >= sec(e.at) && once(b, `event${k}`)) b.msg(e.text, e.tone ?? 'info', e.side);
+  });
+  b.scenario.sides.forEach((side, si) => {
+    let pending = 0;
+    for (const slot of side.slots) {
+      if (!slot.reserve) continue;
+      if (t < sec(slot.arrive ?? 0)) {
+        pending++;
+        continue;
+      }
+      if (once(b, `arrive:${slot.key}`) && spawnReserve(w, b.map, slot.key)) {
+        b.reindex();
+        b.msg(`${slot.name} arrives with ${slot.title}!`, 'good', si);
+        b.msg(`${slot.name} arrives with ${slot.title}!`, 'bad', 1 - si);
+      }
+    }
+    w.scenario.vars[`pending${si}`] = pending;
+  });
+});
+
 registerScenarioScript('thermopylae', (b: Battle) => {
   const w = b.world;
   const sc = w.scenario;
