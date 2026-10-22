@@ -12,6 +12,7 @@ import { RANK, UF } from './types';
 import { possess, unpossess, avatarAction } from './roles/possession';
 import { useAbility } from './roles/abilities';
 import { recruit, replenish } from './economy/gold';
+import { aiArmy } from './ai/util';
 
 export type Command =
   | { k: 'move'; u: number[]; x: number; y: number; dx?: number; dy?: number; w?: number; run?: boolean }
@@ -20,6 +21,7 @@ export type Command =
   | { k: 'form'; u: number[]; f: FormationKind }
   | { k: 'flag'; u: number[]; f: 'fire' | 'skirmish' | 'guard'; on: boolean }
   | { k: 'det'; d: number; o: DetOrder['k']; x?: number; y?: number; t?: number }
+  | { k: 'ally'; a: number; o: AllyPlan; x?: number; y?: number }
   | { k: 'ability'; u: number; a: string; x?: number; y?: number }
   | { k: 'possess'; s: number }
   | { k: 'unpossess' }
@@ -33,6 +35,18 @@ export type Command =
   | { k: 'replenish'; u: number }
   /** Only the relay sends these: a player dropped or came back. */
   | { k: 'sys'; e: 'leave' | 'join'; p: number };
+
+/** What a general can ask of an allied AI general: attack, defend or hold a place, or decide. */
+export type AllyPlan = 'assault' | 'defend' | 'hold' | 'auto';
+
+const ALLY_PLANS: AllyPlan[] = ['assault', 'defend', 'hold', 'auto'];
+
+const ALLY_SAYS: Record<AllyPlan, string> = {
+  assault: 'attacks!',
+  defend: 'will defend that ground and strike at whatever comes near.',
+  hold: 'will hold that ground.',
+  auto: 'fights to their own plan again.',
+};
 
 /** A command as delivered in a relay turn: p is the sender, set by the relay. */
 export interface TaggedCommand {
@@ -173,6 +187,21 @@ function applyOne(b: Battle, p: PlayerState, c: Command): void {
       }
       return;
     }
+    case 'ally': {
+      const a = b.army(c.a);
+      const mine = b.army(p.army);
+      if (!a || !mine || !finite(c.x, c.y) || !ALLY_PLANS.includes(c.o)) return;
+      // A general may direct an AI-led army on their own side.
+      if (p.role !== 'general' || a.id === mine.id || a.side !== mine.side || !aiArmy(b, a)) return;
+      const ai = a.ai;
+      ai.cmd = c.o === 'auto' ? '' : c.o;
+      ai.at = (c.o === 'defend' || c.o === 'hold') && c.x !== undefined && c.y !== undefined ? [q2(c.x), q2(c.y)] : [];
+      ai.plan = c.o === 'auto' ? '' : c.o === 'hold' ? 'defend' : c.o;
+      ai.stage = 0;
+      ai.since = w.tick;
+      b.msg(`${a.name} ${ALLY_SAYS[c.o]}`, 'info', a.side);
+      return;
+    }
     case 'ability': {
       const u = b.unit(c.u);
       if (u && controls(b, p, u) && finite(c.x, c.y)) useAbility(b, u, c.a, c.x, c.y);
@@ -290,6 +319,7 @@ export function teleportUnit(b: Battle, u: Unit, x: number, y: number, dx: numbe
   u.ay = y;
   u.dx = fx;
   u.dy = fy;
+  u.trail = [];
   for (const id of u.sol) {
     const s = b.soldier(id);
     if (!s) continue;

@@ -11,6 +11,17 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.4.0',
+    date: '22 October 2026',
+    title: 'Orders for your allies, and cleaner marching',
+    items: [
+      'Allied generals: the new panel at the top left asks each AI-led army on your side to Attack, Defend a place, Hold a place, or follow its own plan. They stick to it until you change it.',
+      'Soldiers keep their bodies off walls, cliffs and the map edge instead of sinking into them.',
+      'Units squeezed through a gap march through it as a column following their leader, and men cut off by a wall walk round through the gap instead of pushing against it.',
+      'When a unit narrows or widens, the men nearest the front take the front ranks, so nobody crosses the whole block to find his place.',
+    ],
+  },
+  {
     version: '1.3.1',
     date: '22 October 2026',
     title: 'Mouse buttons your way',

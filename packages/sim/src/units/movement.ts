@@ -1,6 +1,8 @@
 // Unit and soldier movement. A unit's anchor (the centre of its front rank) follows its
 // order along a path; each soldier steers toward his slot behind the anchor, or toward the
 // enemy he is fighting, while keeping clear of his neighbours and of impassable ground.
+// A column squeezed through a gap lays its ranks along the anchor's trail, and a man cut off
+// from his slot by a wall follows that trail round instead of pressing against the wall.
 
 import type { Battle } from '../battle';
 import { DT, PACE, TILE, sec } from '../constants';
@@ -15,6 +17,11 @@ import { FORM, depthOf, slotOffset, spacing } from './formation';
 import { isRanged } from '../combat/missiles';
 
 const PATHS_PER_TICK = 6;
+
+/** Spacing of trail points, in metres. */
+const TRAIL_STEP = 1;
+/** Room a soldier keeps between his body and a wall, cliff or the sea's edge, in metres. */
+const WALL_GAP = 0.35;
 
 export function moveMask(t: UnitTypeDef): number {
   if (t.cls === 'ele' || t.cls === 'chariot') return MOVE.large;
@@ -88,7 +95,10 @@ export function updateAnchors(b: Battle): void {
           u.dx = o.dx;
           u.dy = o.dy;
         }
-        if (o.width > 0) u.width = u.bw = o.width;
+        if (o.width > 0) {
+          u.bw = o.width;
+          setWidth(b, u, o.width);
+        }
         o.k = 'none';
         u.st = u.engaged ? 'engaged' : 'idle';
       } else {
@@ -110,7 +120,7 @@ export function updateAnchors(b: Battle): void {
     }
     if (u.st !== 'moving' && u.width !== u.bw && u.form !== 'wedge') {
       // Out of the narrows: spread back out.
-      u.width = maxFilesAt(b, u, t, u.ax, u.ay);
+      setWidth(b, u, maxFilesAt(b, u, t, u.ax, u.ay));
     }
   }
 }
@@ -233,7 +243,8 @@ function followPath(b: Battle, u: Unit, t: UnitTypeDef, run: boolean, keepFacing
   if (c.n > 1 && !fleeing) {
     const n = Math.max(1, u.sol.length - 1);
     const back = depthOf(u, t, n, u.width) / 2;
-    const lag = dist(u.ax - u.dx * back, u.ay - u.dy * back, c.x, c.y);
+    const [mx, my] = inColumn(u) ? trailAt(u, back) : [u.ax - u.dx * back, u.ay - u.dy * back];
+    const lag = dist(mx, my, c.x, c.y);
     if (lag > 12) speed *= 0.15;
     else if (lag > 6) speed *= 0.5;
   }
@@ -251,7 +262,7 @@ function followPath(b: Battle, u: Unit, t: UnitTypeDef, run: boolean, keepFacing
   // shore that is close on one side when there is room on the other.
   if (u.form !== 'wedge' && !fleeing) {
     const ahead = Math.min(maxFilesAt(b, u, t, u.ax, u.ay), maxFilesAt(b, u, t, u.ax + u.dx * 8, u.ay + u.dy * 8));
-    u.width = ahead;
+    setWidth(b, u, ahead);
     const [l, r] = sideRoom(b, u, t, u.ax, u.ay);
     const half = (u.width * spacing(t, u.form)[0]) / 2;
     const shift = l < half && r > half ? Math.min(half - l, r - half) : r < half && l > half ? -Math.min(half - r, l - half) : 0;
@@ -259,8 +270,111 @@ function followPath(b: Battle, u: Unit, t: UnitTypeDef, run: boolean, keepFacing
       u.ax += -u.dy * shift * 0.1;
       u.ay += u.dx * shift * 0.1;
     }
+    recordTrail(b, u, t);
   }
   return u.path.length === 0;
+}
+
+/** Adds the anchor's position to its trail and drops what the unit no longer needs. */
+function recordTrail(b: Battle, u: Unit, t: UnitTypeDef): void {
+  const tr = u.trail;
+  if (tr.length >= 2) {
+    const d = dist(u.ax, u.ay, tr[0]!, tr[1]!);
+    if (d < TRAIL_STEP) return;
+    // The anchor jumped (drifting in a fight, or a nudge): the old trail no longer leads here.
+    if (d > TRAIL_STEP * 4) tr.length = 0;
+  }
+  tr.unshift(u.ax, u.ay);
+  const keep = depthOf(u, t, Math.max(1, u.sol.length - 1), u.width) + 8;
+  let acc = 0;
+  for (let i = 2; i + 1 < tr.length; i += 2) {
+    acc += dist(tr[i - 2]!, tr[i - 1]!, tr[i]!, tr[i + 1]!);
+    if (acc > keep) {
+      tr.length = i + 2;
+      break;
+    }
+  }
+}
+
+/** A unit squeezed narrower than its formation while marching: its ranks follow the trail. */
+function inColumn(u: Unit): boolean {
+  return u.st === 'moving' && u.width < u.bw && u.form !== 'wedge' && u.trail.length >= 4;
+}
+
+/**
+ * The point `back` metres behind the anchor along its trail, and the direction of march there
+ * (straight on past the end of the trail).
+ */
+export function trailAt(u: Unit, back: number): [number, number, number, number] {
+  let px = u.ax;
+  let py = u.ay;
+  let fx = u.dx;
+  let fy = u.dy;
+  let left = back;
+  const tr = u.trail;
+  for (let i = 0; i + 1 < tr.length; i += 2) {
+    const qx = tr[i]!;
+    const qy = tr[i + 1]!;
+    const d = dist(px, py, qx, qy);
+    if (d < 1e-6) continue;
+    const sx = (px - qx) / d;
+    const sy = (py - qy) / d;
+    if (d >= left) return [px - sx * left, py - sy * left, sx, sy];
+    left -= d;
+    px = qx;
+    py = qy;
+    fx = sx;
+    fy = sy;
+  }
+  return [px - fx * left, py - fy * left, fx, fy];
+}
+
+/**
+ * Where a soldier should head for his slot at (tx, ty). Close by, or with the way clear, that
+ * is the slot itself; cut off by a wall, he follows the anchor's trail instead: the furthest
+ * point along it toward the anchor that he can walk straight to.
+ */
+function detour(b: Battle, u: Unit, s: Soldier, mask: number, tx: number, ty: number): [number, number] {
+  const tr = u.trail;
+  if (tr.length < 4 || dist(s.x, s.y, tx, ty) < 2.5 || easyLine(b.map, s.x, s.y, tx, ty, mask, 0, 0)) return [tx, ty];
+  let best = -1;
+  let bd = Infinity;
+  for (let i = 0; i + 1 < tr.length; i += 2) {
+    const d = (tr[i]! - s.x) * (tr[i]! - s.x) + (tr[i + 1]! - s.y) * (tr[i + 1]! - s.y);
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  }
+  // From the nearest trail point, look ahead toward the anchor while the way stays clear.
+  let to = best;
+  for (let i = best - 2, n = 0; i >= -2 && n < 8; i -= 2, n++) {
+    const x = i < 0 ? u.ax : tr[i]!;
+    const y = i < 0 ? u.ay : tr[i + 1]!;
+    if (!easyLine(b.map, s.x, s.y, x, y, mask, 0, 0)) break;
+    to = i;
+  }
+  return to < 0 ? [u.ax, u.ay] : [tr[to]!, tr[to + 1]!];
+}
+
+const DIRS = [1, 0, -1, 0, 0, 1, 0, -1, 0.7071, 0.7071, -0.7071, 0.7071, 0.7071, -0.7071, -0.7071, -0.7071];
+
+/** A push away from impassable ground within a man's body and a little more of him. */
+function wallPush(b: Battle, x: number, y: number, mask: number, r: number): [number, number] {
+  let px = 0;
+  let py = 0;
+  const near = r * 0.6;
+  const far = r + WALL_GAP;
+  for (let i = 0; i < DIRS.length; i += 2) {
+    const ox = DIRS[i]!;
+    const oy = DIRS[i + 1]!;
+    if (!passableAt(b.map, x + ox * far, y + oy * far, mask)) {
+      const hard = !passableAt(b.map, x + ox * near, y + oy * near, mask);
+      px -= ox * (hard ? 3 : 1.5);
+      py -= oy * (hard ? 3 : 1.5);
+    }
+  }
+  return [px, py];
 }
 
 // --- Soldiers ---------------------------------------------------------------------------
@@ -322,7 +436,7 @@ export function steerSoldiers(b: Battle): void {
       const e = b.soldier(s.tgt);
       if (!e || e.hp <= 0) {
         s.tgt = 0;
-        [tx, ty] = slotPos(b, u, t, s);
+        [tx, ty] = detour(b, u, s, mask, ...slotPos(b, u, t, s));
       } else {
         const eu = b.unit(e.u)!;
         const reach = t.reach + t.radius + b.typeOf(eu).radius;
@@ -337,7 +451,7 @@ export function steerSoldiers(b: Battle): void {
         s.fy = ny;
       }
     } else {
-      [tx, ty] = slotPos(b, u, t, s);
+      [tx, ty] = detour(b, u, s, mask, ...slotPos(b, u, t, s));
     }
 
     // Desired velocity toward the target point.
@@ -385,6 +499,9 @@ export function steerSoldiers(b: Battle): void {
     });
     vx += px;
     vy += py;
+    const [wx, wy] = wallPush(b, s.x, s.y, mask, r);
+    vx += wx;
+    vy += wy;
     const vl = len(vx, vy);
     const cap = maxSpeed * 1.4 + 0.5;
     if (vl > cap) {
@@ -444,7 +561,38 @@ export function slotPos(b: Battle, u: Unit, t: UnitTypeDef, s: Soldier): [number
   }
   const n = u.sol.length - (u.cap ? 1 : 0);
   const [lat, back] = slotOffset(u, t, s.slot, n, u.width);
+  if (inColumn(u)) {
+    const [x, y, fx, fy] = trailAt(u, back);
+    return [x - fy * lat, y + fx * lat];
+  }
   return [u.ax + rx * lat - u.dx * back, u.ay + ry * lat - u.dy * back];
+}
+
+/**
+ * Changes how many files abreast a unit stands, and deals out the slots again by where the men
+ * are: the nearest the front take the front rank, left to right, then the next rank, so
+ * nobody crosses the block to reach his new place.
+ */
+function setWidth(b: Battle, u: Unit, width: number): void {
+  if (width === u.width) return;
+  u.width = width;
+  if (u.form === 'wedge') return;
+  const rx = -u.dy;
+  const ry = u.dx;
+  const men: { s: Soldier; back: number; lat: number }[] = [];
+  for (const id of u.sol) {
+    const s = b.soldier(id);
+    if (!s || id === u.cap) continue;
+    const ox = s.x - u.ax;
+    const oy = s.y - u.ay;
+    men.push({ s, back: -(ox * u.dx + oy * u.dy), lat: ox * rx + oy * ry });
+  }
+  men.sort((a, z) => a.back - z.back || a.s.id - z.s.id);
+  const w = Math.max(1, Math.min(width, men.length));
+  for (let i = 0; i < men.length; i += w) {
+    const row = men.slice(i, i + w).sort((a, z) => a.lat - z.lat || a.s.id - z.s.id);
+    for (let k = 0; k < row.length; k++) row[k]!.s.slot = i + k;
+  }
 }
 
 /** Re-numbers slots after losses so the rear ranks step forward. */

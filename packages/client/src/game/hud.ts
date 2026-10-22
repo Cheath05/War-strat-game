@@ -1,7 +1,7 @@
 // The HUD snapshot: what React shows about the battle, rebuilt ten times a second from
 // the world (React never reads the simulation directly).
 
-import { ABILITIES, ORDER_NAMES, TEAM_COLORS, TICK_HZ, abilitiesOf, strengthOf, type Battle, type Tone, type Unit } from '@pl/sim';
+import { ABILITIES, ORDER_NAMES, TEAM_COLORS, TICK_HZ, abilitiesOf, aiArmy, strengthOf, type Battle, type Tone, type Unit } from '@pl/sim';
 import type { GameSession } from './session';
 
 export interface HudMessage {
@@ -47,6 +47,18 @@ export interface DetCard {
   units: UnitCard[];
 }
 
+/** An AI-led army on our side that our general can give a plan. */
+export interface AllyCard {
+  id: number;
+  name: string;
+  title: string;
+  /** What it's doing: the plan we asked for, or its own. */
+  plan: string;
+  cmd: string;
+}
+
+const ALLY_PLANS: Record<string, string> = { assault: 'Attacking', defend: 'Defending', hold: 'Holding' };
+
 export interface SideInfo {
   name: string;
   color: string;
@@ -71,6 +83,7 @@ export interface HudState {
   /** The AI is leading this player's troops (they handed them over). */
   auto: boolean;
   dets: DetCard[];
+  allies: AllyCard[];
   selected: number[];
   messages: HudMessage[];
   possessed: { unit: number; name: string; hp: number; maxHp: number; hold: boolean } | null;
@@ -116,6 +129,7 @@ export function emptyHud(): HudState {
     ready: false,
     auto: false,
     dets: [],
+    allies: [],
     selected: [],
     messages: [],
     possessed: null,
@@ -260,6 +274,7 @@ export function buildHud(s: GameSession): HudState {
     ready: !!me?.ready,
     auto: !!me?.auto,
     dets,
+    allies: me?.role === 'general' && myArmy ? allyCards(b, myArmy.id, myArmy.side) : [],
     selected: [...(s.renderer?.selected ?? [])],
     messages: s.recentMessages(),
     possessed,
@@ -271,6 +286,16 @@ export function buildHud(s: GameSession): HudState {
     orderMode: s.input?.orderMode ?? '',
     myOrder: commanderOrder(s),
   };
+}
+
+function allyCards(b: Battle, mine: number, side: number): AllyCard[] {
+  const out: AllyCard[] = [];
+  for (const a of b.world.armies) {
+    if (a.id === mine || a.side !== side || !aiArmy(b, a)) continue;
+    if (!b.world.units.some((u) => u.army === a.id && u.st !== 'gone')) continue;
+    out.push({ id: a.id, name: a.name, title: a.title, plan: ALLY_PLANS[a.ai.cmd] ?? 'Own plan', cmd: a.ai.cmd });
+  }
+  return out;
 }
 
 function commanderOrder(s: GameSession): HudState['myOrder'] {

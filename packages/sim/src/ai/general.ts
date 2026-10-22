@@ -1,6 +1,7 @@
 // General AI: picks a battle plan for an AI-led army and gives its detachments orders.
 // Plans: assault (skirmish, advance, engage, flank with horse), defend (hold a line and
-// counter-charge), or a scenario directive (march a route, take a zone, wait).
+// counter-charge), or a scenario directive (march a route, take a zone, wait). An allied human
+// general can ask for a plan (a.ai.cmd): attack, defend a place or hold it; the AI keeps to it.
 
 import type { Battle } from '../battle';
 import { TICK_HZ, sec } from '../constants';
@@ -72,8 +73,11 @@ function think(b: Battle, a: Army): void {
   const C = centroid(b, own)!;
   const E = centroid(b, enemies)!;
   // A 'hold' army keeps the facing the scenario gave its position; others face the enemy.
-  const holdFace = a.directive === 'hold' && (a.face[0] || a.face[1]) ? a.face : undefined;
-  const [fx, fy] = holdFace ? [holdFace[0]!, holdFace[1]!] : norm(E.x - C.x, E.y - C.y, 0, -1);
+  const holdFace = a.directive === 'hold' && !a.ai.cmd && (a.face[0] || a.face[1]) ? a.face : undefined;
+  // A place a general asked us to defend or hold, if any.
+  const at = a.ai.at.length ? { x: a.ai.at[0]!, y: a.ai.at[1]! } : null;
+  const O = at ?? C;
+  const [fx, fy] = holdFace ? [holdFace[0]!, holdFace[1]!] : norm(E.x - O.x, E.y - O.y, 0, -1);
   const rx = -fy;
   const ry = fx;
   const ratio = sidePower(b, a.side) / Math.max(1, sidePower(b, 1 - a.side));
@@ -165,29 +169,33 @@ function think(b: Battle, a: Army): void {
     // Defend: hold where we stand (or the deployment zone), counter-attack what reaches us.
     const zx = (a.zone[0]! + a.zone[2]!) / 2;
     const zy = (a.zone[1]! + a.zone[3]!) / 2;
-    const hx = dist(C.x, C.y, zx, zy) < 60 ? zx : C.x;
-    const hy = dist(C.x, C.y, zx, zy) < 60 ? zy : C.y;
+    const hx = at ? at.x : dist(C.x, C.y, zx, zy) < 60 ? zx : C.x;
+    const hy = at ? at.y : dist(C.x, C.y, zx, zy) < 60 ? zy : C.y;
+    // Asked to defend: strike at enemies that come within reach of the place, then return.
+    const strike = a.ai.cmd === 'defend' ? nearestEnemy(b, hx, hy, a.side, 70, (o) => o.st !== 'routing') : undefined;
     const lineDets = dets.filter((d) => role(d) === 'line');
     const widths = lineDets.map((d) => detUnits(b, d).reduce((q, u) => q + unitFrontage(b, u) + 3, 0) + 5);
     const totalW = widths.reduce((s, x) => s + x, 0);
     // In narrow ground the detachments stand one behind the other.
-    const at = fitRow(b, hx, hy, fx, fy, widths, 3, 30);
-    const deep = at.length ? at[at.length - 1]![1] + 30 : 0;
+    const rows = fitRow(b, hx, hy, fx, fy, widths, 3, 30);
+    const deep = rows.length ? rows[rows.length - 1]![1] + 30 : 0;
     const [L, R] = roomAt(b, hx, hy, rx, ry);
     let wing = 0;
     const contact = own.some((u) => u.engaged > 0);
     for (const d of dets) {
       const r = role(d);
       if (r === 'guard') continue;
-      if (r === 'line') {
-        const [lat, back] = at[lineDets.indexOf(d)]!;
+      if (strike && (r === 'line' || r === 'wing')) {
+        setOrder(b, d, 'attack', hx, hy, strike.id);
+      } else if (r === 'line') {
+        const [lat, back] = rows[lineDets.indexOf(d)]!;
         setOrder(b, d, 'hold', hx + rx * lat - fx * back, hy + ry * lat - fy * back, 0, holdFace);
       } else if (r === 'skirm') {
         setOrder(b, d, 'skirmish', hx + fx * 25, hy + fy * 25, 0, holdFace);
       } else if (r === 'wing') {
         const side = wing++ % 2 === 0 ? 1 : -1;
         const off = totalW / 2 + 25;
-        if (contact && w.settings.difficulty > 0) setOrder(b, d, side > 0 ? 'flankR' : 'flankL', E.x, E.y);
+        if (contact && w.settings.difficulty > 0 && a.ai.cmd !== 'hold') setOrder(b, d, side > 0 ? 'flankR' : 'flankL', E.x, E.y);
         else if ((side > 0 ? R : L) >= off + 15) setOrder(b, d, 'hold', hx + rx * side * off, hy + ry * side * off, 0, holdFace);
         else setOrder(b, d, 'hold', hx - fx * (deep + 15), hy - fy * (deep + 15), 0, holdFace);
       } else if (r === 'reserve') {
@@ -196,7 +204,7 @@ function think(b: Battle, a: Army): void {
     }
     // Nobody comes: take the fight to them if we're not weaker; finish a broken enemy.
     const waited = !contact && a.directive !== 'defend' && a.directive !== 'hold' && w.tick - a.ai.since > sec(150) && ratio >= 0.95;
-    if ((waited || ratio > 1.8) && a.directive !== 'hold') {
+    if ((waited || ratio > 1.8) && a.directive !== 'hold' && !a.ai.cmd) {
       a.ai.plan = 'assault';
       a.ai.stage = 0;
       a.ai.since = w.tick;
