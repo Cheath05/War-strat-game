@@ -1,4 +1,5 @@
 import type { FactionDef } from '../types';
+import { unit } from './kit';
 
 // The middle Republic (c. 200 BC): the Polybian legion of velites, hastati, principes and
 // triarii, with allied Socii and citizen cavalry.
@@ -182,6 +183,15 @@ export const ROME: FactionDef = {
       radius: 0.4,
       sprite: { body: 'medium', armor: 'linen', helmet: 'attic', crest: 'long', shield: 'scutum', weapon: 'sword', cloth: 'linen', skin: 'olive' },
     },
+    unit(
+      'rome',
+      'cohort',
+      'Legionary Cohort',
+      'After Marius the legion fights in cohorts of professional soldiers, all armed alike with mail, the long shield, two pila and the gladius.',
+      'swordsman',
+      { body: 'medium', armor: 'mail', helmet: 'montefortino', crest: 'plume', shield: 'scutum', weapon: 'sword', cloth: 'team', skin: 'olive', emblem: 'wings', tint: { crest: 'black' } },
+      { size: 24, cost: 700, hp: 88, atk: 44, def: 42, armor: 52, shield: 50, dmg: 30, ap: 10, morale: 68, forms: ['line', 'testudo', 'loose'], missile: { kind: 'pilum', range: 24, ammo: 2, dmg: 44, ap: 26, reload: 2.5, acc: 0.76 } },
+    ),
     {
       id: 'rome.equites',
       faction: 'rome',

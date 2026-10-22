@@ -6,7 +6,6 @@ import { RoomConnection, type ConnStatus } from '../net/connection';
 import { loadProfile } from '../app/profile';
 import { GameSession } from '../game/session';
 import { loadGraphics } from '../game/render/quality';
-import { sharedArt } from '../game/render/BattleRenderer';
 import { Lobby, type ChatLine } from './Lobby';
 import { Hud } from './Hud';
 
@@ -52,7 +51,6 @@ export function Room({ code, exit }: { code: string; exit: () => void }) {
           break;
         case 'start':
           // Build the battle now so turns arriving right after are not lost.
-          sharedArt();
           startSession(Battle.create(m.setup));
           break;
         case 'turn':

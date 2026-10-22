@@ -54,8 +54,10 @@ function look(s: SpriteSpec): Look {
     const m = s.tint?.[part];
     return m ? MATERIALS[m] : usual;
   };
-  const skin = s.skin === 'tan' || s.skin === 'brown' ? R.skinTan : s.skin === 'dark' ? R.skinDark : R.skinOlive;
-  const cloth = tint('cloth', s.cloth === 'linen' ? R.linen : s.cloth === 'dark' ? R.darkCloth : R.team);
+  const skin = s.skin === 'tan' || s.skin === 'brown' ? R.skinTan : s.skin === 'dark' ? R.skinDark : s.skin === 'light' ? R.skinLight : R.skinOlive;
+  // Bare-chested men (Gallic fanatics) have their skin where the tunic would be.
+  const cloth = tint('cloth', s.cloth === 'linen' ? R.linen : s.cloth === 'dark' ? R.darkCloth : s.cloth === 'bare' ? skin : R.team);
+  const hair = s.hair === 'fair' ? R.hairFair : s.hair === 'auburn' ? R.horse : s.hair === 'grey' ? R.stone : R.hair;
   let armor: number = cloth;
   let armorPattern: Look['armorPattern'] = 'plain';
   switch (s.armor) {
@@ -94,9 +96,11 @@ function look(s: SpriteSpec): Look {
         ? R.horse
         : s.helmet === 'lionpelt'
           ? R.wicker
-          : s.helmet === 'galea'
+          : s.helmet === 'galea' || s.helmet === 'conical'
             ? R.iron
-            : clothHelm
+            : s.helmet === 'nemes'
+              ? R.linen
+              : clothHelm
               ? s.cloth === 'team'
                 ? R.team2
                 : R.team
@@ -118,7 +122,7 @@ function look(s: SpriteSpec): Look {
     shieldRim,
     emblem: tint('emblem', s.emblem === 'lambda' || s.emblem === 'owl' ? R.team2 : R.gold),
     cape: tint('cape', s.cape === 'red' ? R.red : R.team),
-    hair: R.hair,
+    hair,
     greaves: s.greaves ? (armorPattern === 'muscle' || armorPattern === 'segmentata' ? armor : R.bronze) : 0,
     trim,
   };
@@ -452,6 +456,39 @@ function helmet(px: Px, L: Look, spec: SpriteSpec, cx: number, y0: number, view:
       px.rect(cx - 5, y0 + 6, 10, 2, h);
       for (let x = cx - 5; x <= cx + 4; x += 3) px.set(x, y0 + 5, h);
       return;
+    case 'nemes': {
+      // The striped headcloth of Egypt: over the crown, lappets falling to the shoulders.
+      const stripe = L.trim ? mid(L.trim) : mid(R.team);
+      px.ellipse(cx - 0.5, y0 + 8.5, 5, 3.8, h);
+      for (let x = cx - 4; x <= cx + 3; x += 2) px.set(x, y0 + 6, stripe, true);
+      if (view === 0) {
+        px.rect(cx - 6, y0 + 9, 2, 8, h);
+        px.rect(cx + 4, y0 + 9, 2, 8, h);
+        for (let y = y0 + 10; y < y0 + 17; y += 2) {
+          px.hline(cx - 6, cx - 5, y, stripe, true);
+          px.hline(cx + 4, cx + 5, y, stripe, true);
+        }
+      } else if (view === 2) {
+        px.rect(cx - 6, y0 + 8, 4, 8, h);
+        for (let y = y0 + 9; y < y0 + 16; y += 2) px.hline(cx - 6, cx - 3, y, stripe, true);
+      } else {
+        px.rect(cx - 6, y0 + 8, 12, 7, h);
+        px.rect(cx - 1, y0 + 15, 2, 3, h);
+        for (let y = y0 + 9; y < y0 + 15; y += 2) px.hline(cx - 6, cx + 5, y, stripe, true);
+      }
+      return;
+    }
+    case 'conical': {
+      // A pointed iron helmet with a band round the brow (Babylon, Assyria, the steppe).
+      px.ellipse(cx - 0.5, y0 + 8.5, 5, 3.2, h);
+      px.rect(cx - 3, y0 + 4, 6, 3, h);
+      px.rect(cx - 2, y0 + 2, 4, 2, h);
+      px.rect(cx - 1, y0, 2, 2, h);
+      px.hline(cx - 5, cx + 4, y0 + 9, L.trim ? mid(L.trim) : dark(L.helm), true);
+      if (view === 1) px.rect(cx - 5, y0 + 10, 10, 2, h);
+      else if (view === 2) px.rect(cx - 5, y0 + 10, 2, 3, h);
+      return;
+    }
   }
 }
 
@@ -715,6 +752,42 @@ function weapon(px: Px, spec: SpriteSpec, hx: number, hy: number, f: Frame, view
       const pull = f.arm === 2 ? 3 : f.arm === 1 ? 1 : 0;
       px.line(bx - pull, hy - 6, bx - pull, hy + 6, mid(R.linen));
       if (f.arm === 1 || f.arm === 2) px.hline(bx - pull, bx + 5, hy, mid(R.wood));
+      return;
+    }
+    case 'rhomphaia': {
+      // A long haft with a heavy curved blade, swung two-handed.
+      if (f.arm === 2) {
+        const d = view === 2 ? 1 : -1;
+        px.line(hx, hy, hx + d * 4, hy + 3, wood);
+        px.line(hx + d * 4, hy + 3, hx + d * 10, hy + 4, iron);
+        px.set(hx + d * 11, hy + 3, iron);
+        px.set(hx + d * 10, hy + 4, P.shine, true);
+        return;
+      }
+      const lift = f.arm === 1 ? -4 : 0;
+      px.vline(hx, hy - 8 + lift, hy + 6 + lift, wood);
+      px.vline(hx, hy - 15 + lift, hy - 9 + lift, iron);
+      px.set(hx + 1, hy - 15 + lift, iron);
+      px.set(hx + 1, hy - 16 + lift, iron);
+      px.set(hx, hy - 14 + lift, P.shine, true);
+      return;
+    }
+    case 'khopesh': {
+      // The sickle-sword: a straight grip, then a blade curving out into a hook.
+      if (f.arm === 1) {
+        px.vline(hx, hy - 7, hy - 3, iron);
+        px.set(hx + 1, hy - 8, iron);
+        px.set(hx + 1, hy - 9, P.shine, true);
+      } else if (f.arm === 2) {
+        const d = view === 2 ? 1 : -1;
+        px.line(hx, hy, hx + d * 5, hy + 3, iron);
+        px.set(hx + d * 6, hy + 2, iron);
+        px.set(hx + d * 6, hy + 1, P.shine, true);
+      } else {
+        px.vline(hx, hy + 1, hy + 5, iron);
+        px.set(hx + 1, hy + 6, iron);
+        px.set(hx, hy, mid(R.gold));
+      }
       return;
     }
     case 'sling': {

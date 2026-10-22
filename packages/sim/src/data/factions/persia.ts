@@ -1,4 +1,5 @@
 import type { FactionDef } from '../types';
+import { unit } from './kit';
 
 // The Achaemenid Empire (c. 480-330 BC): masses of archers behind wicker shields, the
 // Immortals, superb horsemen from across the empire, and scythed chariots.
@@ -240,6 +241,14 @@ export const PERSIA: FactionDef = {
       mounted: true,
       sprite: { body: 'light', armor: 'leather', helmet: 'pilos', crest: 'none', shield: 'none', weapon: 'bow', cloth: 'team', skin: 'tan', beard: true, mount: 'horse' },
     },
+    unit(
+      'persia',
+      'camels',
+      'Camel Archers',
+      'Arab archers on camels. At Thymbra Cyrus set them before his army, and the Lydian horses fled from their smell.',
+      'camel',
+      { body: 'light', armor: 'none', helmet: 'turban', crest: 'none', shield: 'none', weapon: 'bow', cloth: 'linen', skin: 'tan', beard: true, mount: 'camel' },
+    ),
     {
       id: 'persia.chariots',
       faction: 'persia',

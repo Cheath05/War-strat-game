@@ -1,0 +1,98 @@
+import type { FactionDef } from '../types';
+import { unit } from './kit';
+
+// Lydia under Croesus (c. 560-546 BC): the richest kingdom in Asia Minor, whose lancers were
+// called the bravest horsemen in Asia until Cyrus brought camels against them.
+
+const F = 'lydia';
+
+export const LYDIA: FactionDef = {
+  id: F,
+  name: 'Lydia',
+  adjective: 'Lydian',
+  desc: 'The golden kingdom of Croesus: famous lancers, Greek-style hoplites, and archers and javelinmen from the peoples of Asia Minor.',
+  colors: [7, 11, 2, 9],
+  general: 'lydia.general',
+  generalNames: ['Croesus', 'Alyattes', 'Gyges', 'Sadyattes', 'Pactyes'],
+  units: [
+    unit(F, 'lancers', 'Lydian Lancers', '"Bravest and most warlike of the peoples of Asia", they fought on horseback with long lances (Herodotus).', 'heavyCav', {
+      body: 'medium',
+      armor: 'scale',
+      helmet: 'attic',
+      crest: 'long',
+      shield: 'none',
+      weapon: 'lance',
+      cloth: 'team',
+      skin: 'olive',
+      beard: true,
+      mount: 'horse',
+    }),
+    unit(F, 'hoplites', 'Lydian Hoplites', 'Citizen spearmen armed in the Greek way.', 'spearman', {
+      body: 'medium',
+      armor: 'bronze',
+      helmet: 'corinthian',
+      crest: 'long',
+      shield: 'aspis',
+      weapon: 'spear',
+      cloth: 'team',
+      skin: 'olive',
+      beard: true,
+      emblem: 'lion',
+    }),
+    unit(F, 'spearmen', 'Mysian Spearmen', 'Levies from the hills of Mysia with spears and wicker shields.', 'levy', {
+      body: 'light',
+      armor: 'none',
+      helmet: 'cap',
+      crest: 'none',
+      shield: 'pelte',
+      weapon: 'spear',
+      cloth: 'linen',
+      skin: 'olive',
+      beard: true,
+    }),
+    unit(F, 'archers', 'Lydian Archers', 'Archers from the cities of the Hermus valley.', 'archer', {
+      body: 'light',
+      armor: 'none',
+      helmet: 'cap',
+      crest: 'none',
+      shield: 'none',
+      weapon: 'bow',
+      cloth: 'team',
+      skin: 'olive',
+    }),
+    unit(F, 'javelinmen', 'Carian Javelinmen', 'Hardy Carian mercenaries with javelins and small shields.', 'javelin', {
+      body: 'light',
+      armor: 'none',
+      helmet: 'none',
+      crest: 'none',
+      shield: 'small',
+      weapon: 'javelin',
+      cloth: 'linen',
+      skin: 'olive',
+      beard: true,
+    }),
+    unit(
+      F,
+      'golden',
+      'Golden Horse of Sardis',
+      "Croesus' own lancers, nobles in gilded scale on the best horses of the Hermus plain.",
+      'eliteCav',
+      { body: 'heavy', armor: 'scale', helmet: 'attic', crest: 'great', shield: 'none', weapon: 'lance', cloth: 'team', cape: 'team', skin: 'olive', beard: true, mount: 'greyhorse', tint: { armor: 'gold', crest: 'red', trim: 'gold' } },
+      {},
+    ),
+    unit(F, 'general', "Croesus' Guard", 'The king and his companions in gold.', 'general', {
+      body: 'heavy',
+      armor: 'scale',
+      helmet: 'crown',
+      crest: 'none',
+      shield: 'none',
+      weapon: 'lance',
+      cloth: 'team',
+      cape: 'team',
+      skin: 'olive',
+      beard: true,
+      mount: 'greyhorse',
+      tint: { trim: 'gold' },
+    }),
+  ],
+};

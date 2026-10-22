@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { FACTIONS, faction, sandboxSlots, unitType, type ArmySlotDef, type ScenarioDef } from '@pl/sim';
-import { Segmented } from './controls';
+import { Picker } from './controls';
 
 const COUNTRIES = FACTIONS.map((f) => ({ v: f.id, label: f.name }));
 
@@ -69,7 +69,7 @@ export function SandboxArmies({
                     </div>
                     <div style={{ margin: '6px 0' }}>
                       {canSetCountry(sl) ? (
-                        <Segmented options={COUNTRIES} value={sl.faction} onChange={(f) => setChoices({ ...choices, [sl.key]: f })} />
+                        <Picker options={COUNTRIES} value={sl.faction} onChange={(f) => setChoices({ ...choices, [sl.key]: f })} />
                       ) : (
                         <span className="dim">{faction(sl.faction).name}</span>
                       )}

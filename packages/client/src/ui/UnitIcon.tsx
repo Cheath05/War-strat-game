@@ -1,18 +1,17 @@
 import { memo, useEffect, useRef } from 'react';
 import { unitType } from '@pl/sim';
-import { frameKey, spriteKey } from '../game/art/atlas';
+import { cellOf } from '../game/art/atlas';
 import { colorOf } from '../game/art/palette';
-import { sharedArt } from '../game/render/BattleRenderer';
+import { sharedPalette } from '../game/render/BattleRenderer';
 
-/** A unit's portrait: its front idle frame in the army's colours, drawn from the atlas into a square. */
+/** A unit's portrait: its front idle frame in the army's colours, drawn into a square. */
 export const UnitIcon = memo(function UnitIcon({ type, pal }: { type: string; pal: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    const { atlas, palette } = sharedArt();
-    const px = atlas.cells.get(frameKey(spriteKey(unitType(type)), 0, 'idle0'));
-    if (!px) return;
+    const palette = sharedPalette();
+    const px = cellOf(unitType(type), 0, 'idle0');
     const side = Math.max(px.w, px.h);
     c.width = side;
     c.height = side;
