@@ -133,6 +133,17 @@ describe('Campaign battles', () => {
     }
   });
 
+  it('stampedes the beasts at their moment in history', () => {
+    // Beneventum: at 150 s Pyrrhus' elephants panic and run.
+    const b = Battle.create({ seed: 1, scenario: 'campaign', options: { battle: 'beneventum', side: '0', diff: '1' }, settings: defaultSettings(), players: [] });
+    const w = b.world;
+    const elephants = () => w.units.filter((u) => u.side === 1 && b.typeOf(u).cls === 'ele');
+    expect(elephants().length).toBeGreaterThan(0);
+    while (!w.result && w.scenario.t <= 150 * TICK_HZ) b.step([]);
+    expect(w.result).toBeNull();
+    for (const u of elephants()) expect(['routing', 'shattered', 'gone']).toContain(u.st);
+  });
+
   it('judges bonus objectives only for the winner', () => {
     const b = Battle.create({ seed: 2, scenario: 'campaign', options: { battle: 'cannae', side: '1', diff: '0' }, settings: defaultSettings(), players: [] });
     const w = b.world;

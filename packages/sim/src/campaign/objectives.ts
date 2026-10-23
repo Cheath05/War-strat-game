@@ -20,7 +20,7 @@ export function objectiveText(o: Objective, battle: BattleDef, side: number): st
       return `${enemy ? enemy.general : 'The enemy general'} falls`;
     }
     case 'destroy':
-      return `Destroy or rout ${o.what}`;
+      return `Destroy ${o.what}`;
     case 'hold':
       return `Hold ${o.what} at the end`;
     case 'kills':
@@ -53,8 +53,10 @@ export function judge(b: Battle, o: Objective, side: number, slot: string): bool
       return !!enemy?.genDead;
     }
     case 'destroy': {
+      // Broken for good, or three in four of their men down: routing alone doesn't count, as
+      // everything the enemy has left is routing when a battle is won.
       const targets = w.units.filter((u) => u.side !== side && ((o.cls && o.cls.includes(b.typeOf(u).cls)) || (o.types && o.types.includes(u.type))));
-      return targets.length > 0 && targets.every((u) => u.st === 'gone' || u.st === 'routing' || u.st === 'shattered' || u.sol.length === 0);
+      return targets.length > 0 && targets.every((u) => u.st === 'gone' || u.st === 'shattered' || u.sol.length <= u.max / 4);
     }
     case 'hold': {
       const pt = b.map.points[o.point];

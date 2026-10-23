@@ -7,6 +7,7 @@ import { defaultArmy, groupDets } from '../economy/armies';
 import { addMen, arrive, newDetachment } from '../economy/gold';
 import { spawnLate, spawnReserve, type ArmySetup } from '../setup';
 import { aiArmy } from '../ai/util';
+import { rout } from '../morale/morale';
 import type { Army } from '../types';
 import { once, registerScenarioScript } from './runtime';
 import { endBattle } from './victory';
@@ -33,7 +34,11 @@ registerScenarioScript('campaign', (b: Battle) => {
   const w = b.world;
   const t = w.scenario.t;
   (b.scenario.events ?? []).forEach((e, k) => {
-    if (t >= sec(e.at) && once(b, `event${k}`)) b.msg(e.text, e.tone ?? 'info', e.side);
+    if (t < sec(e.at) || !once(b, `event${k}`)) return;
+    b.msg(e.text, e.tone ?? 'info', e.side);
+    // Elephants or chariots turned back: they stampede, through their own lines as often as not.
+    const p = e.panic;
+    if (p) for (const u of w.units) if (u.side === p.side && u.st !== 'gone' && u.st !== 'routing' && u.st !== 'shattered' && p.cls.includes(b.typeOf(u).cls)) rout(b, u);
   });
   b.scenario.sides.forEach((side, si) => {
     let pending = 0;

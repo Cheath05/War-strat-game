@@ -24,7 +24,9 @@ import { lerp, smooth } from '../../math/det';
 //   road    0: no road through the middle
 //
 // Zones: south and north (where the armies usually start, each with _w and _e halves), west
-// and east (the flanks), centre, ravine (with ravine), between and between_s (with walls).
+// and east (the flanks), centre (and centre_n / centre_s, facing north and south), hold_n
+// and hold_s (either side of the middle, facing it), ravine (with ravine), between and
+// between_s (with walls).
 
 const W = 460;
 const H = 340;
@@ -273,6 +275,13 @@ function build(p: Painter, params: Record<string, number>): void {
   p.zone('west', Math.max(10, xl - 14), H * 0.3, Math.max(10, xl - 14) + 70, H * 0.7, 1, 0);
   p.zone('east', Math.min(W - 10, xr + 14) - 70, H * 0.3, Math.min(W - 10, xr + 14), H * 0.7, -1, 0);
   p.zone('centre', W / 2 - 70, H / 2 - 36, W / 2 + 70, H / 2 + 36, 0, -1);
+  // The middle of the field, facing each way (an army caught between two others).
+  p.zone('centre_n', W / 2 - 90, H / 2 - 44, W / 2 + 90, H / 2 - 4, 0, -1);
+  p.zone('centre_s', W / 2 - 90, H / 2 + 4, W / 2 + 90, H / 2 + 44, 0, 1);
+  // Holding a line across the middle (a wall, a pass): just north of it facing south, or
+  // just south of it facing north.
+  p.zone('hold_n', xl, H / 2 - 48, xr, H / 2 - 6, 0, 1);
+  p.zone('hold_s', xl, H / 2 + 6, xr, H / 2 + 48, 0, -1);
   if (ravine) p.zone('ravine', Math.max(8, gullyX(H / 2) - 56), H * 0.36, gullyX(H / 2) - 10, H * 0.64, 1, 0);
   if (walls) {
     p.zone('between', xl, wallY[0]! + 8, xr, H / 2 - 4, 0, -1);

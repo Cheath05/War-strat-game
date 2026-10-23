@@ -220,6 +220,8 @@ export interface ScenarioEvent {
   side: number;
   text: string;
   tone?: 'info' | 'good' | 'bad' | 'epic';
+  /** At that moment this side's beasts of these classes panic and stampede (e.g. ['ele']). */
+  panic?: { side: number; cls: string[] };
 }
 
 export interface ScenarioDef {
