@@ -26,6 +26,9 @@ An HD-2D (Octopath Traveler / Final Fantasy Resonance style), Total War-like bat
 - `npm run cf:dev` runs the Cloudflare Worker locally (http://localhost:8787, no account needed); `npm run deploy` publishes it (needs `npx wrangler login`, which the user approves).
 - `npm run bots -- ABCD 3 --start --scenario thermopylae --seconds 60` plays a room with bots and reports whether they stayed in sync.
 - `npx tsx tools/sprite-sheet.ts out.png 0 greece.spartans rome.hastati` renders units' sprites (key views, 4x, team colour 0) to a PNG for reviewing art without a browser; `#art` in the browser shows a faction's line-up.
+- `npx tsx tools/map-preview.ts out.png battlefield '{"river":1,"deep":1}'` draws a map from above (terrain, heights, zones, points) to a PNG.
+- `npx tsx tools/campaign-balance.ts 0,3 [country|battle ...] [--seeds 2] [--detail]` plays campaign battles headless with the AI leading the player's side, at the given difficulties (0 Easy to 3 Extreme), and reports who wins. A full pass takes about ten minutes per difficulty and seed.
+- Campaigns: battles in `packages/sim/src/data/campaigns/battles/`, the five road maps in `campaigns.ts`; the campaign screens and the save format in `packages/client/src/ui/campaign/` and `src/app/campaign.ts`.
 
 ## Rules that must hold
 

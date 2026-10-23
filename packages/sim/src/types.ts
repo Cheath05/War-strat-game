@@ -148,6 +148,12 @@ export interface Unit {
   calm: number;
   /** Tick this unit entered the battle. */
   born: number;
+  /** Campaign bonuses (upgrades and veterancy) added to the type's attack, defence, armour and morale. */
+  up: { atk: number; def: number; armor: number; morale: number };
+  /** Veterancy rank 0..3 (campaign): drawn as chevrons; its bonus is already in `up`. */
+  vet: number;
+  /** Campaign roster id ('' outside campaigns): survivors are read back by it. */
+  ref: string;
 }
 
 export interface DetOrder {

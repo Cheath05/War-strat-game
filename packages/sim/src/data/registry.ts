@@ -6,8 +6,22 @@ import { GREECE } from './factions/greece';
 import { PERSIA } from './factions/persia';
 import { CARTHAGE } from './factions/carthage';
 import { MACEDON } from './factions/macedon';
+import { GAULS } from './factions/gauls';
+import { SAMNITES } from './factions/samnites';
+import { EPIRUS } from './factions/epirus';
+import { SELEUCIDS } from './factions/seleucids';
+import { GERMANS } from './factions/germans';
+import { LYDIA } from './factions/lydia';
+import { BABYLON } from './factions/babylon';
+import { EGYPT } from './factions/egypt';
+import { SCYTHIA } from './factions/scythia';
+import { IBERIA } from './factions/iberia';
+import { THRACE } from './factions/thrace';
+import { ILLYRIA } from './factions/illyria';
+import { INDIA } from './factions/india';
 
-export const FACTIONS: FactionDef[] = [ROME, GREECE, CARTHAGE, PERSIA, MACEDON];
+/** The five great powers first (each has a campaign), then the peoples they fought. */
+export const FACTIONS: FactionDef[] = [ROME, GREECE, CARTHAGE, PERSIA, MACEDON, GAULS, SAMNITES, EPIRUS, SELEUCIDS, GERMANS, LYDIA, BABYLON, EGYPT, SCYTHIA, IBERIA, THRACE, ILLYRIA, INDIA];
 
 const UNITS = new Map<string, UnitTypeDef>();
 const FACTION_BY_ID = new Map<string, FactionDef>();

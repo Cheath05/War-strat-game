@@ -1,5 +1,5 @@
 import { STRENGTHS, type ScenarioDef, type Settings } from '@pl/sim';
-import { Segmented, Toggle, type SegOption } from './controls';
+import { Picker, Segmented, Toggle, type SegOption } from './controls';
 
 const SWITCHES: { k: 'morale' | 'fatigue' | 'ammo' | 'fog'; name: string; on: string; off: string }[] = [
   {
@@ -119,11 +119,15 @@ export function ScenarioOptions({ sc, choices, onChange }: { sc: ScenarioDef; ch
           <div key={o.id} className="rule-row">
             <span className="rule-name">{o.name}</span>
             <div>
-              <Segmented
-                options={o.choices.map((c) => ({ v: c.id, label: c.name }))}
-                value={choices[o.id] ?? ''}
-                onChange={onChange && ((id: string) => onChange({ ...choices, [o.id]: id }))}
-              />
+              {o.choices.length > 7 ? (
+                <Picker options={o.choices.map((c) => ({ v: c.id, label: c.name }))} value={choices[o.id] ?? ''} onChange={onChange && ((id: string) => onChange({ ...choices, [o.id]: id }))} />
+              ) : (
+                <Segmented
+                  options={o.choices.map((c) => ({ v: c.id, label: c.name }))}
+                  value={choices[o.id] ?? ''}
+                  onChange={onChange && ((id: string) => onChange({ ...choices, [o.id]: id }))}
+                />
+              )}
               {desc && <p className="rule-desc">{desc}</p>}
             </div>
           </div>

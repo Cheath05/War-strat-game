@@ -48,12 +48,17 @@ const DET_NAMES: Record<UnitRole, string[]> = {
 
 /** Groups units into detachments: the line in blocks of up to four, then missiles, then horse. */
 export function groupDets(units: string[]): DetDef[] {
-  const by: Record<UnitRole, string[]> = { line: [], missile: [], horse: [] };
-  for (const id of units) by[roleOf(unitType(id))].push(id);
-  const out: DetDef[] = [];
+  return groupBy(units, (id) => id).map((g) => ({ name: g.name, units: g.items }));
+}
+
+/** groupDets for any kind of item that has a unit type (campaign units keep their extras). */
+export function groupBy<T>(items: T[], typeOf: (item: T) => string): { name: string; items: T[] }[] {
+  const by: Record<UnitRole, T[]> = { line: [], missile: [], horse: [] };
+  for (const it of items) by[roleOf(unitType(typeOf(it)))].push(it);
+  const out: { name: string; items: T[] }[] = [];
   for (const role of ['line', 'missile', 'horse'] as UnitRole[]) {
     const list = by[role];
-    for (let i = 0; i < list.length; i += 4) out.push({ name: DET_NAMES[role][Math.min(3, i / 4)]!, units: list.slice(i, i + 4) });
+    for (let i = 0; i < list.length; i += 4) out.push({ name: DET_NAMES[role][Math.min(3, i / 4)]!, items: list.slice(i, i + 4) });
   }
   return out;
 }

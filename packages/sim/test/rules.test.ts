@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildMap, findPath, MOVE, TERRAIN, UF, spacing } from '../src';
+import { buildMap, findPath, MOVE, T, TERRAIN, UF, spacing } from '../src';
+import { formAt } from '../src/combat/damage';
 import { orderAttack, orderMove, setFormation } from '../src/commands';
+import { tileAt } from '../src/map/mapgen';
+import { FORM } from '../src/units/formation';
 import { emptyBattle, place, run } from './helpers';
 
 describe('combat rules', () => {
@@ -61,6 +64,16 @@ describe('combat rules', () => {
       if (weak.st === 'routing' || weak.st === 'shattered') routed = true;
     }
     expect(routed).toBe(false);
+  });
+
+  it('woods break up a phalanx: there it fights as a plain line', () => {
+    const b = emptyBattle();
+    const pikes = place(b, 1, 'macedon.pikemen', 150, 120, 0, 1, 24);
+    pikes.form = 'phalanx';
+    const s = b.soldier(pikes.sol[0]!)!;
+    expect(formAt(b, s, pikes)).toBe(FORM.phalanx);
+    b.map.ter[tileAt(b.map, s.x, s.y)] = T.forest;
+    expect(formAt(b, s, pikes)).toBe(FORM.line);
   });
 
   it('with fatigue switched off, running tires nobody', () => {

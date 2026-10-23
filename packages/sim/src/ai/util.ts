@@ -32,7 +32,7 @@ export function power(b: Battle, u: Unit): number {
   const t = b.typeOf(u);
   // Strength multiplies both health and damage, so a side's value goes with its square.
   const st = strengthOf(b.world.settings, u.side);
-  const per = ((t.atk + t.def + t.armor / 2) * t.hp * st * st) / 100;
+  const per = ((t.atk + u.up.atk + t.def + u.up.def + (t.armor + u.up.armor) / 2) * t.hp * st * st) / 100;
   return u.sol.length * per * (u.st === 'routing' || u.st === 'shattered' ? 0.1 : 1);
 }
 

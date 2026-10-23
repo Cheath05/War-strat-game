@@ -4,13 +4,14 @@
 
 **Pixel Legions** is an HD-2D battle game in the style of Octopath Traveler and Final Fantasy Resonance: pixel-art soldiers fighting in a lit 3D diorama.
 
-Up to four friends command ancient armies from **Rome, Greece, Carthage, Persia and Macedon** in real-time, Total War-style battles. You play in the browser on Windows or Mac, with nothing to install.
+Up to four friends command ancient armies from **Rome, Greece, Carthage, Persia and Macedon**, and thirteen more peoples of the ancient world, in real-time, Total War-style battles. You play in the browser on Windows or Mac, with nothing to install.
 
 - **Be a General.** Command your detachments, or take command of any captain or commander and lead their unit in person (WASD).
 - **Or serve as a Commander** under a friend's General: their orders show up on your map.
 - **Co-op against the AI, or player vs player.** Every battle has two sides; pick yours in the lobby, and the AI fills empty slots.
+- **Campaigns** (solo): lead Rome, Greece, Carthage, Persia or Macedon through 13 to 18 of their famous battles, from Marathon and Cannae to Gaugamela and Alesia. Pick Easy, Normal, Hard or Extreme; keep one veteran army from battle to battle or take a fresh one each time; win Glory and bonus objectives, and spend them on upgrades and new troops.
 - **Modes:** Thermopylae (480 BC), Last Stand (survive the waves), Objective battles (Capture & Hold, Defend the Bridge) and the Sandbox (any ground, any armies, any units).
-- **Gold modes:** Generals recruit their own armies, then buy reinforcements during the battle. Every faction has a **super unit** (Black Spartans, Praetorian Guard, Apple-Bearers, Hannibal's Veterans, Silver Shields).
+- **Gold modes:** Generals recruit their own armies, then buy reinforcements during the battle. Every faction has a **super unit** (Black Spartans, Praetorian Guard, Apple-Bearers, Hannibal's Veterans, Silver Shields, the Gauls' Naked Fanatics and more).
 - **16-bit soundtrack and effects**, all generated in code; volumes are in Settings.
 
 ## Play

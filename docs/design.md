@@ -44,7 +44,7 @@ This is the living design: it starts as the approved v1 design in [plans/v1.md](
   - Falls with casualties, flank or rear attacks, being charged, nearby friends routing, terror, and exhaustion.
 - **Terrain:**
   - hills: a height bonus, and slower going uphill;
-  - forests: cover, slow cavalry, and break a phalanx;
+  - woods, rocky ground, marsh and shallows: cover (woods and rocks), slow going, and they break up tight formations: a phalanx, testudo or shield wall standing there fights as a plain line and can't brace against charges;
   - fords and shallows;
   - impassable cliffs, sea and walls.
 
@@ -57,6 +57,26 @@ This is the living design: it starts as the approved v1 design in [plans/v1.md](
 | **Persia** | Immortals, Sparabara, Takabara, Median/Cissian Levy, Persian Archers, Persian Cavalry, Saka Horse Archers, Scythed Chariots |
 | **Carthage** | Libyan Spearmen, Sacred Band, Iberian Scutarii, Gallic mercenaries, Balearic Slingers, Numidian Cavalry, Iberian Cavalry, War Elephants |
 | **Macedon** | Pezhetairoi pike phalanx, Hypaspists, Agrianian Javelinmen, Cretan Archers, Companion Cavalry, Thessalian Cavalry, Prodromoi |
+
+Thirteen more peoples fight in the campaigns and can be picked anywhere a country is chosen (4–8 unit types each, a general's guard and a super unit):
+
+| Faction | Units |
+|---|---|
+| **Gauls** | Warband, Spearmen, Noble Swordsmen, Skirmishers, Cavalry, War Chariots; super unit: Naked Fanatics |
+| **Samnites** | Samnite Infantry, Samnite Spearmen, Lucanian Javelinmen, Samnite Cavalry; Linen Legion |
+| **Epirus** (Pyrrhus) | Epirote Phalanx, Italiot Hoplites, Chaonian Javelinmen, Tarentine Horse, Epirote Companions, War Elephants; Royal Agema |
+| **Seleucid Empire** | Phalangites, Argyraspides, Thureophoroi, Galatian Swordsmen, Cretan Archers, Cataphracts, Scythed Chariots, War Elephants; Royal Agema |
+| **Germanic Tribes** (Cimbri and Teutones) | Spear Warriors, Axe Warriors, Javelin Throwers, Germanic Horse; Wolf Warriors |
+| **Lydia** | Lydian Lancers, Lydian Hoplites, Mysian Spearmen, Lydian Archers, Carian Javelinmen; Golden Horse of Sardis |
+| **Babylon** | Babylonian Spearmen, Chaldean Levy, Babylonian Archers, Slingers, Heavy Chariots, Babylonian Horse; Guard of the Ishtar Gate |
+| **Egypt** | Machimoi Spearmen, Khopesh Swordsmen, Nubian Archers, Libyan Javelinmen, Chariotry, Greek Mercenaries; Pharaoh's Guard |
+| **Scythia** | Horse Archers, Noble Cavalry, Foot Archers, Sagaris Axemen, Steppe Spearmen; Royal Scyths |
+| **Iberia** | Caetrati, Celtiberian Scutarii, Lusitanian Javelinmen, Iberian Slingers, Iberian Horse; Soldurii |
+| **Thrace** | Thracian Peltasts, Rhomphaia Warriors, Thracian Tribesmen, Getic Horse Archers, Thracian Cavalry; Bessi Champions |
+| **Illyria** | Illyrian Warriors, Illyrian Spearmen, Illyrian Javelinmen, Dardanian Horse; Ardiaean Raiders |
+| **India** (Porus) | Longbowmen, Indian Swordsmen, Indian Spearmen, Indian Chariots, Indian Cavalry, War Elephants; Royal Elephants |
+
+Rome also has the Legionary Cohort (the later, professional legion) and Persia the Camel Archers.
 
 All of this is data files, so adding a unit or a faction later is one file and doesn't change the engine.
 
@@ -81,6 +101,37 @@ Every battle has two sides. If all of you are on one side, it's co-op against th
 - **Objective battles** (PVE or PVP):
   - **Capture & Hold:** three points on the plains, the river crossing or the hill camp. Each point held scores a victory point a second. 1,200 wins; otherwise most points after 20 minutes. 4,000 gold per army, plus 60 a minute.
   - **Defend the Bridge:** the attackers must get 60 men across the river, by the bridge or the fords, within 15 minutes. The defenders have 3,500 gold per army and the attackers 5,500. One AI attacker goes for the bridge and one marches round by the north ford.
+
+## Campaigns (solo)
+- **Five campaigns,** one for each of the original countries, each a road of 13–18 historical battles read left to right (`packages/sim/src/data/campaigns/`):
+  - **Rome:** Sentinum (295 BC) to Alesia (52 BC), through Pyrrhus, Hannibal, Macedon and the Seleucids;
+  - **Greece:** Marathon to Crannon, through the Peloponnesian War, Cunaxa, Leuctra and Chaeronea;
+  - **Carthage:** Himera to Zama, through the First Punic War and Hannibal's war in Italy;
+  - **Persia:** Thymbra to Gaugamela, with the Persian Gate after;
+  - **Macedon:** the Erigon valley to Pydna, through Alexander's conquests and his successors' wars.
+- **The road:** the main battles in the middle, side battles (optional) above and below, and choices where either of two battles opens the way on. A battle opens when any battle before it is won.
+- **Battles are defined once,** with both sides' armies, and played from either side by the campaigns that include them: Cannae for Rome or Carthage, Gaugamela for Macedon or Persia. Each has its battlefield (one map, `battlefield`, drawn from parameters: rivers, fords, a lake, the sea, hills, a ridge, woods, marsh, a ravine, the walls of Alesia, a mountain pass), the generals and armies, AI orders, armies that arrive later (Mago's ambush at the Trebia, Nero at the Metaurus), timed messages, how it is won (rout, holding out, the enemy general's death) and three bonus objectives for each side. Thermopylae plays the existing scenario.
+- **Historical allies** fight as AI generals the player can order (Attack, Defend, Hold). Winning a battle your side lost in history marks it "history changes".
+- **Difficulty:**
+
+  | | Enemy armies | Enemy damage | AI | Glory | Starting Glory | Fresh-army budget |
+  |---|---|---|---|---|---|---|
+  | Easy | ×0.8 | ×1 | Easy | ×0.75 | 1,500 | ×1.25 |
+  | Normal | ×1 | ×1 | Normal | ×1 | 1,000 | ×1 |
+  | Hard | ×1.2 | ×1 | Hard | ×1.25 | 800 | ×0.9 |
+  | Extreme | ×1.4 | ×1.15 | Legendary | ×1.5 | 600 | ×0.8 |
+
+- **Your army,** chosen when the campaign starts:
+  - **Veteran army:** one army for the whole campaign (up to 20 units). Survivors carry on with the men they have left and the kills they've made. Kills give ranks: Blooded at half the unit's number, Seasoned at one and a half times, Veterans at three times; each rank adds +2 attack, +2 defence and +5 morale. Units destroyed in battle are gone.
+  - **Fresh armies:** each battle starts from the army history gave the player, which they can change within a budget (the historical army's cost × the difficulty's budget), with any troops unlocked so far.
+- **Glory** is won for each victory and, once each, for each bonus objective (shown as stars). In camp it buys:
+  - recruits (two fifths of a unit's price) and refills (about a third of the price of the men missing);
+  - upgrades for each arm (infantry; missile troops; cavalry, with elephants and chariots), three levels in three tracks, at 300, 600 and 1,000 Glory a level: **Weapons** +3 attack, **Armour** +1 defence and +6 armour, **Drill** +2 defence and +6 morale;
+  - new troops: each country's roster unlocks troops for Glory once a battle is won (Rome's Praetorian Guard after Zama, Greece's Spartans after Thermopylae).
+- **Bonus objectives:** win within N minutes, lose fewer than X% of your men, keep your general alive, kill the enemy general, destroy a kind of enemy unit (the elephants, the Immortals), hold a place at the end, or make a share of your side's kills.
+- **Defeat costs nothing:** the army is as it was before the battle, and the battle can be fought again.
+- **Saves:** one campaign per country in the browser (localStorage `pl.campaign.<country>`); starting a country again asks first.
+- **Balance:** `tools/campaign-balance.ts` plays every campaign battle headless with the AI leading the player's side, at chosen difficulties.
 
 ## Economy (Last Stand, Objective battles, and the Persian side in PVP Thermopylae)
 - **Gold is per player.** A General's gold buys units for their army; a Commander's gold buys units for their own detachment.

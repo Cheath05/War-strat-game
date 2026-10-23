@@ -1,5 +1,6 @@
-// Builds the sprite atlas once at start-up: every unit type in every view and pose, plus
-// the props. Pixels hold palette indices (red channel), so one atlas serves all armies.
+// The sprite atlas: every unit type a battle can show, in every view and pose, plus the
+// props. Pixels hold palette indices (red channel), so one atlas serves all armies. Frames
+// are drawn once, the first time anything needs them (a battle's atlas, a menu's portrait).
 
 import { FACTIONS, type SpriteSpec, type UnitTypeDef } from '@pl/sim';
 import { Px } from './px';
@@ -38,7 +39,7 @@ export function spriteKey(t: UnitTypeDef): string {
     .map(([k, v]) => `${k}=${v}`)
     .sort()
     .join(',');
-  return [kind, s.body, s.armor, s.helmet, s.crest, s.shield, s.weapon, s.cloth, s.cape ?? '', s.beard ? 'b' : '', s.skin ?? '', s.mount ?? '', s.emblem ?? '', s.greaves ? 'g' : '', tint].join('.');
+  return [kind, s.body, s.armor, s.helmet, s.crest, s.shield, s.weapon, s.cloth, s.cape ?? '', s.beard ? 'b' : '', s.skin ?? '', s.hair ?? '', s.mount ?? '', s.emblem ?? '', s.greaves ? 'g' : '', tint].join('.');
 }
 
 export function frameKey(sprite: string, view: View, pose: Pose): string {
@@ -61,20 +62,32 @@ function drawFrame(kind: string, spec: SpriteSpec, view: View, pose: Pose): Px {
   return px;
 }
 
-export function buildAtlas(): Atlas {
+const CELLS = new Map<string, Px>();
+
+/** One frame of a unit type, drawn the first time it's asked for. */
+export function cellOf(t: UnitTypeDef, view: View, pose: Pose): Px {
+  const sk = spriteKey(t);
+  const key = frameKey(sk, view, pose);
+  let px = CELLS.get(key);
+  if (!px) {
+    px = drawFrame(sk.split('.')[0]!, t.sprite, view, pose);
+    CELLS.set(key, px);
+  }
+  return px;
+}
+
+/** The atlas for these unit types (all of them by default). */
+export function buildAtlas(types: UnitTypeDef[] = FACTIONS.flatMap((f) => f.units)): Atlas {
   const items: { key: string; px: Px; metres?: number }[] = [];
   const seen = new Set<string>();
-  for (const f of FACTIONS) {
-    for (const t of f.units) {
-      const sk = spriteKey(t);
-      if (seen.has(sk)) continue;
-      seen.add(sk);
-      const kind = sk.split('.')[0]!;
-      for (const view of [0, 1, 2] as View[]) {
-        for (const pose of POSES) {
-          if (pose === 'dead' && view !== 0) continue;
-          items.push({ key: frameKey(sk, view, pose), px: drawFrame(kind, t.sprite, view, pose) });
-        }
+  for (const t of types) {
+    const sk = spriteKey(t);
+    if (seen.has(sk)) continue;
+    seen.add(sk);
+    for (const view of [0, 1, 2] as View[]) {
+      for (const pose of POSES) {
+        if (pose === 'dead' && view !== 0) continue;
+        items.push({ key: frameKey(sk, view, pose), px: cellOf(t, view, pose) });
       }
     }
   }

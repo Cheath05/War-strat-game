@@ -13,7 +13,7 @@ export { buildMap, heightAt, terrainAt, listMaps, type BattleMap, type MapScript
 export { T, TERRAIN, MOVE } from './map/terrain';
 export { findPath } from './map/pathfind';
 export { FACTIONS, faction, unitType, scenarioDef, scenarioChoices, budgetFor, listScenarios, hasUnitType } from './data/registry';
-export { allRecruitable, armyCost, defaultArmy, groupDets, recruitable, roleOf, validArmy, validSandboxArmy } from './economy/armies';
+export { allRecruitable, armyCost, defaultArmy, groupBy, groupDets, recruitable, roleOf, validArmy, validSandboxArmy, type UnitRole } from './economy/armies';
 export { slotKeys as sandboxSlots } from './data/scenarios/sandbox';
 export { TEAM_COLORS, type TeamColor } from './data/colors';
 export type * from './data/types';
@@ -24,3 +24,9 @@ export { computeMorale } from './morale/morale';
 export { seedRng } from './math/rng';
 export { hashWorld } from './hash';
 export { PROJ_KIND } from './combat/missiles';
+export { MAX_LEVEL, MAX_RANK, PER_LEVEL, PER_RANK, RANK_NAMES, TRACKS, noUpgrades, unitBonus, vetRank, type Track, type Upgrades } from './economy/upgrades';
+export { battleDef, campaignDef, hasBattle, listBattles, listCampaigns } from './campaign/registry';
+export { battleScenario, parseUnits, scaleUnits, slotKey } from './campaign/scenario';
+export { campaignArmy, rankOf, readSurvivors, type RosterUnit, type Survivor } from './campaign/army';
+export { judge, objectiveText } from './campaign/objectives';
+export { DIFFICULTIES, type BattleArmy, type BattleDef, type CampaignDef, type CampaignNode, type Difficulty, type Objective, type RosterEntry } from './campaign/types';

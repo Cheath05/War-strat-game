@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { FACTIONS } from '@pl/sim';
-import { frameKey, spriteKey } from '../game/art/atlas';
+import { cellOf } from '../game/art/atlas';
 import { type Pose, type View } from '../game/art/doll';
 import { colorOf } from '../game/art/palette';
-import { sharedArt } from '../game/render/BattleRenderer';
+import { sharedPalette } from '../game/render/BattleRenderer';
 
 /** The views shown per unit: front, side and back standing, then side and front striking, side walking. */
 const SHOTS: [View, Pose][] = [
@@ -23,7 +23,7 @@ export function ArtPreview() {
   const [faction, setFaction] = useState(FACTIONS[0]!.id);
   useEffect(() => {
     const c = ref.current!;
-    const { atlas, palette } = sharedArt();
+    const palette = sharedPalette();
     const f = FACTIONS.find((x) => x.id === faction)!;
     const S = 4;
     const cell = 66;
@@ -34,8 +34,7 @@ export function ArtPreview() {
     g.fillRect(0, 0, c.width, c.height);
     f.units.forEach((t, row) => {
       SHOTS.forEach(([view, pose], i) => {
-        const px = atlas.cells.get(frameKey(spriteKey(t), view, pose));
-        if (!px) return;
+        const px = cellOf(t, view, pose);
         for (let y = 0; y < px.h; y++) {
           for (let x = 0; x < px.w; x++) {
             const idx = px.data[y * px.w + x]!;

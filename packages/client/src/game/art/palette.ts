@@ -53,6 +53,9 @@ export const R = {
   fire: 101,
   steel: 104,
   silver: 107,
+  skinLight: 110,
+  hairFair: 113,
+  camel: 116,
 } as const;
 export type Ramp = (typeof R)[keyof typeof R];
 
@@ -103,11 +106,15 @@ const RAMPS: Record<number, [number, number, number]> = {
   // Blackened bronze or steel, and polished silver (super units).
   [R.steel]: [0x17161c, 0x30313b, 0x5e6170],
   [R.silver]: [0x7a8292, 0xbec6d2, 0xf6f9fc],
+  // Northern peoples: fair skin and fair hair; and the camel's sandy coat.
+  [R.skinLight]: [0xb07a5c, 0xe4b08e, 0xffd8bc],
+  [R.hairFair]: [0x8a6420, 0xc89a40, 0xecd078],
+  [R.camel]: [0x8c6638, 0xc29a62, 0xe6c896],
 };
 
 /** Index → whether it belongs to a shadable ramp, and which. */
 export function rampOf(i: number): number {
-  if (i < 8 || i > 109) return -1;
+  if (i < 8 || i > 118) return -1;
   return 8 + Math.floor((i - 8) / 3) * 3;
 }
 

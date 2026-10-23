@@ -41,7 +41,7 @@ export function computeMorale(b: Battle, u: Unit): number {
   const t = b.typeOf(u);
   const army = b.army(u.army)!;
   const c = b.center(u);
-  let m = t.morale;
+  let m = t.morale + u.up.morale;
   // The general's presence.
   const gen = b.soldier(army.genSoldier);
   if (gen && !army.genDead) {

@@ -1,4 +1,5 @@
 import type { FactionDef } from '../types';
+import { unit } from './kit';
 
 // The Greek city-states at the time of the Persian Wars (c. 480 BC): bronze-armoured
 // hoplites in a shield wall, light troops on the flanks, few horsemen.
@@ -96,6 +97,15 @@ export const GREECE: FactionDef = {
       radius: 0.42,
       sprite: { body: 'medium', armor: 'linen', helmet: 'corinthian', crest: 'long', shield: 'aspis', weapon: 'spear', cloth: 'team', skin: 'tan', beard: true, emblem: 'owl', greaves: true },
     },
+    unit(
+      'greece',
+      'thebans',
+      'Sacred Band of Thebes',
+      'One hundred and fifty pairs of lovers, each fighting to be worthy of the other. Unbeaten for thirty years, until Chaeronea.',
+      'heavySpear',
+      { body: 'heavy', armor: 'bronze', helmet: 'boeotian', crest: 'none', shield: 'aspis', weapon: 'spear', cloth: 'team', cape: 'team', skin: 'olive', beard: true, emblem: 'boss', greaves: true },
+      { cost: 900, morale: 88 },
+    ),
     {
       id: 'greece.peltasts',
       faction: 'greece',

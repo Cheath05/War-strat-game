@@ -12,7 +12,7 @@ import { TERRAIN } from '../map/terrain';
 import type { Projectile, Unit } from '../types';
 import { ACT, UF } from '../types';
 import { FORM } from '../units/formation';
-import { damage, isLarge } from './damage';
+import { damage, formAt, isLarge } from './damage';
 
 export const PROJ_KIND = { arrow: 0, javelin: 1, stone: 2, pilum: 3 } as const;
 const SPEED = [48, 24, 38, 20];
@@ -191,19 +191,19 @@ function land(b: Battle, p: Projectile): void {
   // Trees and rocks give cover.
   const cover = TERRAIN[terrainAt(b.map, e.x, e.y)]!.cover;
   if (cover > 0 && rand(w.rng) < cover) return;
-  // Shields facing the volley; the testudo covers above and in front.
+  // Shields facing the volley; the testudo covers above and in front (where the ground lets it form).
   const [dx, dy] = norm(p.tx - p.sx, p.ty - p.sy);
   const facing = -(dx * eu.dx + dy * eu.dy);
-  const f = FORM[eu.form];
+  const f = formAt(b, e, eu);
   let block = 0;
   if (facing > 0.2) block = et.shield + f.missileBlock;
-  else if (eu.form === 'testudo') block = f.missileBlock;
+  else if (f === FORM.testudo) block = f.missileBlock;
   if (p.kind === PROJ_KIND.pilum) block *= 0.5;
   if (block > 0 && rand(w.rng) * 100 < Math.min(95, block)) {
     b.emit({ k: 'block', s: e.id, x: e.x, y: e.y });
     return;
   }
-  const armor = Math.min(90, et.armor);
+  const armor = Math.min(90, et.armor + eu.up.armor);
   const roll = randRange(w.rng, armor * 0.5, armor) / 100;
   let dmg = p.dmg * (1 - roll) + p.ap;
   if (isLarge(et)) dmg += p.vsLarge;

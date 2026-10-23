@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FACTIONS, armyCost, defaultArmy, groupDets, recruitable, roleOf, unitType, type UnitTypeDef } from '@pl/sim';
 import { UnitIcon } from './UnitIcon';
-import { Segmented } from './controls';
+import { Picker } from './controls';
 
 const COUNTRIES = FACTIONS.map((f) => ({ v: f.id, label: f.name }));
 /** Soldiers in an army at medium unit size. */
@@ -73,7 +73,10 @@ export function RecruitPanel({
               <>
                 <p className="hint">Any country's units, as many as you like and free. Click a unit to add it, Shift-click to add five.</p>
                 <div style={{ marginBottom: 10 }}>
-                  <Segmented options={COUNTRIES} value={country} onChange={setCountry} />
+                  <span className="dim" style={{ marginRight: 8 }}>
+                    Country
+                  </span>
+                  <Picker options={COUNTRIES} value={country} onChange={setCountry} />
                 </div>
               </>
             ) : (

@@ -7,7 +7,14 @@ import { Px } from './px';
 import { drawSoldier, type Pose, type View } from './doll';
 
 function coat(kind: SpriteSpec['mount']): number {
-  return kind === 'darkhorse' ? R.horseDark : kind === 'greyhorse' ? R.horseGrey : R.horse;
+  return kind === 'darkhorse' ? R.horseDark : kind === 'greyhorse' ? R.horseGrey : kind === 'barded' ? R.iron : R.horse;
+}
+
+/** Scale armour over a barded horse: a dark stroke on every other scale of its coat. */
+function barding(px: Px, x0: number, y0: number, x1: number, y1: number, body: number, c: number): void {
+  for (let y = y0; y <= y1; y += 2) {
+    for (let x = x0 + ((y >> 1) % 2); x <= x1; x += 3) if (px.get(x, y) === body) px.set(x, y, dark(c), true);
+  }
 }
 
 /** Leg swing per pose for a 4-beat walk/gallop: [front pair, back pair] offsets. */
@@ -29,7 +36,9 @@ function gait(pose: Pose): [number, number] {
 }
 
 export function drawHorseman(px: Px, spec: SpriteSpec, view: View, pose: Pose): void {
+  if (spec.mount === 'camel') return drawCamel(px, spec, view, pose);
   const c = coat(spec.mount);
+  const barded = spec.mount === 'barded';
   const body = mid(c);
   const mane = mid(R.horseDark === c ? R.black : R.horseDark);
   const [fa, ba] = gait(pose);
@@ -66,6 +75,10 @@ export function drawHorseman(px: Px, spec: SpriteSpec, view: View, pose: Pose): 
     for (let i = 0; i < 7; i++) px.set(31 + (i >> 1), y - 2 - i, mane);
     px.rect(11, y - 1, 2, 3, mane);
     px.rect(10, y + 2, 2, 7, mane);
+    if (barded) {
+      barding(px, 11, y - 10, 43, y + 12, body, c);
+      px.hline(37, 42, y - 9, light(c), true);
+    }
     // Saddle cloth in team colours.
     px.rect(18, y - 3, 9, 5, mid(R.team));
     px.hline(18, 26, y + 2, mid(R.team2), true);
@@ -85,6 +98,7 @@ export function drawHorseman(px: Px, spec: SpriteSpec, view: View, pose: Pose): 
   for (const x of [18 + fa, 28 - fa]) px.rect(x, y + 19, 2, 1, P.outline, true);
   // Barrel and saddle cloth, wider than the rider.
   px.ellipse(24, y + 3, 8, 6, body);
+  if (barded) barding(px, 16, y - 3, 32, y + 9, body, c);
   px.rect(15, y - 1, 18, 4, mid(R.team));
   px.hline(15, 32, y + 3, mid(R.team2), true);
   drawSoldier(px, spec, view, pose, 24, y + 8, true);
@@ -104,6 +118,73 @@ export function drawHorseman(px: Px, spec: SpriteSpec, view: View, pose: Pose): 
     px.ellipse(24, y + 4, 7, 5, body);
     px.rect(23, y + 3, 2, 10, mane);
     px.set(24, y + 13, mane);
+  }
+  if (barded) barding(px, 17, y - 4, 31, y + 16, body, c);
+}
+
+/**
+ * A camel and its rider, in the horse's 48x48 frame: long legs, a hump the rider sits behind,
+ * and a long neck curving up and forward. Horses shy from their smell.
+ */
+function drawCamel(px: Px, spec: SpriteSpec, view: View, pose: Pose): void {
+  const c = R.camel;
+  const body = mid(c);
+  const [fa, ba] = gait(pose);
+  const bob = pose === 'walk1' || pose === 'walk3' || pose === 'idle1' ? 1 : 0;
+  if (pose === 'dead') {
+    px.ellipse(22, 41, 12, 4, body);
+    px.ellipse(22, 37, 4, 3, body);
+    px.ellipse(36, 40, 4, 3, body);
+    drawSoldier(px, spec, 0, 'dead', 26, 47);
+    return;
+  }
+  const y = 24 + bob;
+  if (view === 2) {
+    // Legs: long and thin, knobbly knees.
+    for (const [x, o, sh] of [[14, ba, true], [18, -ba, false], [28, fa, true], [32, -fa, false]] as const) {
+      px.rect(x + o, y + 6, 2, 13, sh ? dark(c) : body);
+      px.set(x + o, y + 12, light(c));
+      px.rect(x + o - 1, y + 19, 3, 1, P.outline, true);
+    }
+    // Body, the hump, the neck curving up and forward to a drooping head.
+    px.ellipse(23, y + 3, 11, 5, body);
+    px.ellipse(21, y - 2, 5, 4, body);
+    for (let i = 0; i < 6; i++) px.rect(32 + i, y + 2 - i * 2, 3, 3, body);
+    px.ellipse(40, y - 9, 3.5, 2.5, body);
+    px.rect(41, y - 8, 4, 2, body);
+    px.set(39, y - 10, P.eye, true);
+    px.rect(38, y - 12, 1, 1, body);
+    px.rect(11, y + 1, 2, 5, dark(c));
+    // Saddle cloth behind the hump.
+    px.rect(25, y - 2, 6, 4, mid(R.team));
+    px.hline(25, 30, y + 2, mid(R.team2), true);
+    drawSoldier(px, spec, 2, pose, 27, y + 6, true);
+    return;
+  }
+  // Front and back: tall legs, the hump rising before (or behind) the rider.
+  const front = view === 0;
+  px.rect(19 - ba, y + 7, 2, 13, dark(c));
+  px.rect(27 + ba, y + 7, 2, 13, dark(c));
+  px.rect(18 + fa, y + 8, 2, 13, body);
+  px.rect(28 - fa, y + 8, 2, 13, body);
+  for (const x of [18 + fa, 28 - fa]) px.rect(x, y + 21, 2, 1, P.outline, true);
+  px.ellipse(24, y + 4, 8, 6, body);
+  px.rect(16, y, 16, 3, mid(R.team));
+  px.hline(16, 31, y + 3, mid(R.team2), true);
+  if (!front) px.ellipse(24, y - 1, 5, 3, body);
+  drawSoldier(px, spec, view, pose, 24, y + 8, true);
+  px.rect(15, y + 1, 2, 6, mid(R.leather));
+  px.rect(31, y + 1, 2, 6, mid(R.leather));
+  if (front) {
+    // The long neck and head come up in front of the rider.
+    px.rect(22, y + 2, 4, 9, body);
+    px.ellipse(24, y + 1, 3, 2.5, body);
+    px.ellipse(24, y + 12, 3, 2.5, body);
+    px.ellipse(24, y + 14, 2, 1.5, light(c));
+    px.set(22, y + 11, P.eye, true);
+    px.set(26, y + 11, P.eye, true);
+  } else {
+    px.rect(23, y + 4, 2, 6, dark(c));
   }
 }
 

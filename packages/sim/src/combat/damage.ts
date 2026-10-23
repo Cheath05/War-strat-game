@@ -7,10 +7,11 @@ import { sec, strengthOf } from '../constants';
 import type { UnitTypeDef } from '../data/types';
 import { clamp, norm } from '../math/det';
 import { rand, randRange } from '../math/rng';
-import { heightAt } from '../map/mapgen';
+import { heightAt, terrainAt } from '../map/mapgen';
+import { TERRAIN } from '../map/terrain';
 import type { Soldier, Unit } from '../types';
 import { ACT } from '../types';
-import { FORM } from '../units/formation';
+import { FORM, type FormInfo } from '../units/formation';
 import { bounty } from '../economy/gold';
 
 /** Ticks of charge bonus after impact. */
@@ -43,6 +44,15 @@ export function aiEdge(b: Battle, u: Unit): number {
   return [-6, 0, 4, 8][b.world.settings.difficulty] ?? 0;
 }
 
+/**
+ * The formation a man actually fights in: woods, rocks, marsh and shallows break up a
+ * phalanx, testudo or shield wall, and he fights as in an ordinary line.
+ */
+export function formAt(b: Battle, s: Soldier, u: Unit): FormInfo {
+  const f = FORM[u.form];
+  return f.frontDef > 0 && TERRAIN[terrainAt(b.map, s.x, s.y)]!.rough ? FORM.line : f;
+}
+
 /** 0 front, 1 flank, 2 rear: where an attack from (ax, ay) hits a unit. */
 export function attackAngle(ax: number, ay: number, e: Soldier, eu: Unit): number {
   const [dx, dy] = norm(ax - e.x, ay - e.y, eu.dx, eu.dy);
@@ -57,11 +67,11 @@ export function isLarge(t: UnitTypeDef): boolean {
 export function meleeStrike(b: Battle, s: Soldier, u: Unit, t: UnitTypeDef, e: Soldier, eu: Unit, et: UnitTypeDef): void {
   const rng = b.world.rng;
   const rel = attackAngle(s.x, s.y, e, eu);
-  const fa = FORM[u.form];
-  const fe = FORM[eu.form];
-  let atk = t.atk + fa.atk + (u.buff > 0 ? 6 : 0) + (u.possBy ? 4 : 0) + aiEdge(b, u) - fatiguePenalty(b, u);
+  const fa = formAt(b, s, u);
+  const fe = formAt(b, e, eu);
+  let atk = t.atk + u.up.atk + fa.atk + (u.buff > 0 ? 6 : 0) + (u.possBy ? 4 : 0) + aiEdge(b, u) - fatiguePenalty(b, u);
   if (s.chg > 0) atk += ((t.charge + fa.chargeBonus) * s.chg) / CHARGE_BONUS_TICKS;
-  let def = et.def + fe.def + aiEdge(b, eu) - fatiguePenalty(b, eu);
+  let def = et.def + eu.up.def + fe.def + aiEdge(b, eu) - fatiguePenalty(b, eu);
   if (rel === 0) def += (et.shield >= 30 ? 5 : 0) + fe.frontDef;
   else if (rel === 1) atk += 6;
   else atk += 12;
@@ -78,7 +88,7 @@ export function meleeStrike(b: Battle, s: Soldier, u: Unit, t: UnitTypeDef, e: S
     if (rel === 0 && et.shield > 0) b.emit({ k: 'block', s: e.id, x: e.x, y: e.y });
     return;
   }
-  const armor = clamp(et.armor - (rel === 2 ? 10 : 0), 0, 90);
+  const armor = clamp(et.armor + eu.up.armor - (rel === 2 ? 10 : 0), 0, 90);
   const roll = randRange(rng, armor * 0.5, armor) / 100;
   let dmg = t.dmg * (1 - roll) + t.ap;
   if (large) dmg += t.bonusLarge * 0.5;

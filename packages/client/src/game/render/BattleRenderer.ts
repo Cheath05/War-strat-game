@@ -2,7 +2,7 @@
 // missiles and effects, with post-processing. Reads the simulation, never changes it.
 
 import * as THREE from 'three';
-import { Battle, TEAM_COLORS, heightAt, spacing, unitType, type SimEvent, type Soldier, type Unit, type UnitTypeDef } from '@pl/sim';
+import { Battle, TEAM_COLORS, faction, hasUnitType, heightAt, spacing, unitType, type SimEvent, type Soldier, type Unit, type UnitTypeDef } from '@pl/sim';
 import { buildAtlas, frameKey, spriteKey, type Atlas, type FrameRect } from '../art/atlas';
 import type { Pose, View } from '../art/doll';
 import { NEUTRAL_ROW, buildPaletteData } from '../art/palette';
@@ -17,11 +17,40 @@ import { createTerrain, type TerrainView } from './terrain';
 import { groundAt, toScreen } from './picking';
 import { Banners, type BannerInfo } from './banners';
 
-let atlasCache: { atlas: Atlas; palette: Uint8Array } | null = null;
-/** The atlas is built once per page (about a second of drawing). */
-export function sharedArt(): { atlas: Atlas; palette: Uint8Array } {
-  if (!atlasCache) atlasCache = { atlas: buildAtlas(), palette: buildPaletteData() };
-  return atlasCache;
+let paletteCache: Uint8Array | null = null;
+/** Every army colour's palette row (built once per page). */
+export function sharedPalette(): Uint8Array {
+  if (!paletteCache) paletteCache = buildPaletteData();
+  return paletteCache;
+}
+
+let atlasCache: { key: string; atlas: Atlas } | null = null;
+/** The atlas for these unit types, kept while battles keep needing the same ones. */
+export function atlasFor(types: UnitTypeDef[]): Atlas {
+  const key = [...new Set(types.map((t) => t.id))].sort().join(' ');
+  if (atlasCache?.key !== key) atlasCache = { key, atlas: buildAtlas(types) };
+  return atlasCache.atlas;
+}
+
+/**
+ * Every unit type a battle can show: what is on the field, every army still to come, and
+ * everything its armies' countries could recruit.
+ */
+export function battleTypes(b: Battle): UnitTypeDef[] {
+  const ids = new Set<string>();
+  const countries = new Set<string>();
+  for (const a of b.world.armies) countries.add(a.faction);
+  for (const side of b.scenario.sides) {
+    countries.add(side.faction);
+    for (const slot of side.slots) {
+      countries.add(slot.faction);
+      if (slot.general) ids.add(slot.general);
+      for (const d of slot.dets) for (const t of d.units) ids.add(t);
+    }
+  }
+  for (const u of b.world.units) ids.add(u.type);
+  for (const f of countries) for (const t of faction(f).units) ids.add(t.id);
+  return [...ids].filter(hasUnitType).map(unitType);
 }
 
 export interface FormationGhost {
@@ -139,9 +168,8 @@ export class BattleRenderer {
 
     const map = battle.map;
     this.rig = new CameraRig(map, 1);
-    const art = sharedArt();
-    this.atlas = art.atlas;
-    this.shared = createSpriteShared(art.atlas.pixels, art.atlas.size, art.palette);
+    this.atlas = atlasFor(battleTypes(battle));
+    this.shared = createSpriteShared(this.atlas.pixels, this.atlas.size, sharedPalette());
 
     // Light: warm low sun from the south-west, cool sky fill, a touch of ambient.
     this.sun = new THREE.DirectionalLight(0xfff0d4, 2.6);

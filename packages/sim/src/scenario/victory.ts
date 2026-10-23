@@ -64,6 +64,11 @@ export function checkVictory(b: Battle): void {
           if (w.sides[side]!.score >= rule.target) return endBattle(b, side, 'victory points');
         }
         break;
+      case 'general': {
+        const a = rule.slot ? w.armies.find((x) => x.slot === rule.slot) : w.armies.find((x) => x.side === rule.side);
+        if (a?.genDead) return endBattle(b, 1 - rule.side, `${a.name} has fallen`);
+        break;
+      }
       case 'deadline':
         if (t >= rule.seconds * TICK_HZ) {
           const s0 = w.sides[0]!.score;

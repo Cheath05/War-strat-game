@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { ORDER_NAMES, TEAM_COLORS, recruitable, unitType, type AllyPlan, type DetOrder, type FormationKind } from '@pl/sim';
+import { ORDER_NAMES, RANK_NAMES, TEAM_COLORS, recruitable, unitType, type AllyPlan, type DetOrder, type FormationKind } from '@pl/sim';
 import { useStore } from '../app/store';
 import type { GameSession } from '../game/session';
 import type { AllyCard, DetCard, UnitCard } from '../game/hud';
@@ -23,7 +23,20 @@ const DET_ORDERS: DetOrder['k'][] = ['hold', 'advance', 'attack', 'flankL', 'fla
 
 const fmt = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function Hud({ session, exit, resultExit, chat }: { session: GameSession; exit: () => void; resultExit?: () => void; chat?: (text: string) => void }) {
+export function Hud({
+  session,
+  exit,
+  resultExit,
+  chat,
+  briefing,
+}: {
+  session: GameSession;
+  exit: () => void;
+  resultExit?: () => void;
+  chat?: (text: string) => void;
+  briefing?: { title: string; lines: string[] };
+}) {
+  const exitLabel = briefing ? 'Continue' : 'Back to the menu';
   const h = useStore(session.hud, (s) => s);
   const [menu, setMenu] = useState<'' | 'menu' | 'settings'>('');
   // The results can be put aside to look over the field (and brought back).
@@ -148,10 +161,11 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
           </div>
         </div>
       )}
-      {h.phase === 'battle' && (h.goldMode || h.allies.length > 0) && (
+      {(h.phase === 'battle' || briefing) && (h.goldMode || h.allies.length > 0 || briefing) && (
         <div className="hud-left">
-          {h.goldMode && <GoldBox session={session} />}
-          {h.allies.length > 0 && <Allies session={session} allies={h.allies} />}
+          {briefing && <Objectives briefing={briefing} />}
+          {h.phase === 'battle' && h.goldMode && <GoldBox session={session} />}
+          {h.phase === 'battle' && h.allies.length > 0 && <Allies session={session} allies={h.allies} />}
         </div>
       )}
       <Minimap session={session} />
@@ -185,7 +199,7 @@ export function Hud({ session, exit, resultExit, chat }: { session: GameSession;
           <DetPanel key={d.id} d={d} session={session} color={myColor} isGeneral={h.role === 'general'} />
         ))}
       </div>
-      {h.result && !resultHidden && <Result session={session} exit={exit} resultExit={resultExit} hide={() => setResultHidden(true)} />}
+      {h.result && !resultHidden && <Result session={session} exit={exit} exitLabel={exitLabel} resultExit={resultExit} hide={() => setResultHidden(true)} />}
       {h.result && resultHidden && (
         <div className="panel hud-banner pl-hud-block">
           <span className={h.result.winner < 0 ? '' : h.result.mine ? 'gold' : 'bad'}>{h.result.winner < 0 ? 'Draw' : h.result.mine ? 'Victory' : 'Defeat'}</span>
@@ -300,6 +314,11 @@ function Card({ u, session, color }: { u: UnitCard; session: GameSession; color:
       <UnitIcon type={u.type} pal={army?.pal ?? 0} />
       {u.maxAmmo > 0 && <span className="ammo">{u.ammo}</span>}
       {u.group > 0 && <span className="badge">{u.group}</span>}
+      {u.vet > 0 && (
+        <span className="chevrons" title={`${RANK_NAMES[u.vet]} (veterancy ${u.vet})`}>
+          {'^'.repeat(u.vet)}
+        </span>
+      )}
       {u.led && (
         <span className="badge" style={{ left: 3, right: 'auto', top: 14 }}>
           ♛
@@ -323,6 +342,26 @@ const ALLY_ORDERS: { o: AllyPlan; label: string; title: string }[] = [
   { o: 'hold', label: 'Hold', title: 'Click a place: they hold that ground and stay put' },
   { o: 'auto', label: 'Own plan', title: 'Let them fight to their own plan' },
 ];
+
+/** A campaign battle's goals: how to win, and the bonus objectives. */
+function Objectives({ briefing }: { briefing: { title: string; lines: string[] } }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="panel allies pl-hud-block">
+      <button className="allies-head" onClick={() => setOpen(!open)} title={open ? 'Hide' : 'Show'}>
+        <span className="label">{briefing.title}</span>
+        <span className="dim">{open ? '−' : '+'}</span>
+      </button>
+      {open && (
+        <ul className="objective-list">
+          {briefing.lines.map((l, i) => (
+            <li key={i}>{l}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 /** The AI generals on our side, and the plan to ask each of them for. */
 function Allies({ session, allies }: { session: GameSession; allies: AllyCard[] }) {
@@ -458,7 +497,7 @@ function OrdersPanel({ session, units }: { session: GameSession; units: UnitCard
   );
 }
 
-function Result({ session, exit, resultExit, hide }: { session: GameSession; exit: () => void; resultExit?: () => void; hide: () => void }) {
+function Result({ session, exit, exitLabel, resultExit, hide }: { session: GameSession; exit: () => void; exitLabel: string; resultExit?: () => void; hide: () => void }) {
   const h = useStore(session.hud, (s) => s);
   const b = session.battle;
   const r = h.result!;
@@ -517,7 +556,7 @@ function Result({ session, exit, resultExit, hide }: { session: GameSession; exi
           </button>
           {!session.multiplayer && (
             <button className="btn primary" onClick={exit}>
-              Back to the menu
+              {exitLabel}
             </button>
           )}
           {session.multiplayer && resultExit && (

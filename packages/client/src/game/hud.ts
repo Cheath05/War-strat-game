@@ -34,6 +34,8 @@ export interface UnitCard {
   abilities: { id: string; name: string; cd: number; ready: boolean }[];
   flags: number;
   run: boolean;
+  /** Campaign veterancy rank (0..3). */
+  vet: number;
 }
 
 export interface DetCard {
@@ -198,6 +200,7 @@ export function card(b: Battle, u: Unit, s: GameSession): UnitCard {
     abilities: abilitiesOf(b, u).map((id) => ({ id, name: ABILITIES[id]?.name ?? id, cd: Math.ceil((u.cds[id] ?? 0) / TICK_HZ), ready: (u.cds[id] ?? 0) <= 0 })),
     flags: u.flags,
     run: u.order.run,
+    vet: u.vet,
   };
 }
 

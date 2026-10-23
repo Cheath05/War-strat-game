@@ -61,17 +61,24 @@ export interface SpriteSpec {
     | 'kausia'
     | 'headband'
     | 'galea'
-    | 'lionpelt';
+    | 'lionpelt'
+    /** Egyptian striped headcloth. */
+    | 'nemes'
+    /** Pointed iron helmet (Babylon, Assyria, the steppe). */
+    | 'conical';
   /** 'great': the tall, bushy horsehair crest of Sparta. */
   crest: 'none' | 'transverse' | 'long' | 'feathers' | 'plume' | 'great';
   shield: 'none' | 'aspis' | 'scutum' | 'parma' | 'pelte' | 'thureos' | 'spara' | 'oval' | 'small';
-  weapon: 'spear' | 'sword' | 'pike' | 'javelin' | 'bow' | 'sling' | 'axe' | 'lance' | 'falcata';
-  /** Tunic colour: the army colour, natural linen, or dark. */
-  cloth: 'team' | 'linen' | 'dark' | 'robe';
+  /** rhomphaia: the Thracian two-handed curved blade on a long haft; khopesh: the Egyptian sickle-sword. */
+  weapon: 'spear' | 'sword' | 'pike' | 'javelin' | 'bow' | 'sling' | 'axe' | 'lance' | 'falcata' | 'rhomphaia' | 'khopesh';
+  /** Tunic colour: the army colour, natural linen, or dark; bare: no tunic at all (Gallic fanatics). */
+  cloth: 'team' | 'linen' | 'dark' | 'robe' | 'bare';
   cape?: 'team' | 'red' | 'none';
   beard?: boolean;
   skin?: 'light' | 'olive' | 'tan' | 'brown' | 'dark';
-  mount?: 'horse' | 'darkhorse' | 'greyhorse' | 'elephant' | 'chariot';
+  hair?: 'dark' | 'fair' | 'auburn' | 'grey';
+  /** barded: a horse in scale armour (cataphracts). */
+  mount?: 'horse' | 'darkhorse' | 'greyhorse' | 'barded' | 'camel' | 'elephant' | 'chariot';
   /** Shield device. */
   emblem?: 'none' | 'lambda' | 'eagle' | 'owl' | 'star' | 'sun' | 'boss' | 'crescent' | 'lion' | 'wings';
   /** Metal greaves on the shins. */
@@ -148,6 +155,10 @@ export interface FactionDef {
 export interface DetDef {
   name: string;
   units: string[];
+  /** Campaign armies, by unit index: strength left (0..1 of full), veterancy rank, roster id. */
+  str?: number[];
+  vet?: number[];
+  ref?: string[];
 }
 
 export interface ArmySlotDef {
@@ -165,6 +176,8 @@ export interface ArmySlotDef {
   ai: string;
   /** Joins later (scenario trigger), not at the start. */
   reserve?: boolean;
+  /** Seconds into the battle a reserve army marches on (campaign battles; others script it). */
+  arrive?: number;
   /** Fixed colour index; defaults to the slot order. */
   pal?: number;
 }
@@ -196,7 +209,20 @@ export type VictoryRule =
   | { k: 'zone'; zone: string; side: number; count: number }
   | { k: 'points'; target: number }
   /** At the deadline, the side with more victory points wins. */
-  | { k: 'deadline'; seconds: number };
+  | { k: 'deadline'; seconds: number }
+  /** The side loses when the general of its first army (or of the army in slot) falls. */
+  | { k: 'general'; side: number; slot?: string };
+
+/** A message at a moment of a scripted battle, for one side (or -1: everyone). */
+export interface ScenarioEvent {
+  /** Seconds into the battle. */
+  at: number;
+  side: number;
+  text: string;
+  tone?: 'info' | 'good' | 'bad' | 'epic';
+  /** At that moment this side's beasts of these classes panic and stampede (e.g. ['ele']). */
+  panic?: { side: number; cls: string[] };
+}
 
 export interface ScenarioDef {
   id: string;
@@ -230,6 +256,8 @@ export interface ScenarioDef {
   objectives?: { at: string; name: string; r: number }[];
   /** Scripted enemy waves (Last Stand): where they come from and how many. */
   waves?: { zones: string[]; count: number };
+  /** Timed messages (campaign battles). */
+  events?: ScenarioEvent[];
 }
 
 export interface ZoneDef {

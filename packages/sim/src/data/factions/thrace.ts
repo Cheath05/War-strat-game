@@ -1,0 +1,97 @@
+import type { FactionDef } from '../types';
+import { unit } from './kit';
+
+// The Thracians and their northern neighbours, the Getae and Triballi (c. 450-280 BC): the
+// peltast was born here, and the rhomphaia that lopped off spearheads.
+
+const F = 'thrace';
+
+export const THRACE: FactionDef = {
+  id: F,
+  name: 'Thrace',
+  adjective: 'Thracian',
+  desc: 'The tribes of Thrace and the lower Danube: the original peltasts, warriors with the two-handed rhomphaia, Getic horse archers and wild cavalry.',
+  colors: [4, 2, 5, 9],
+  general: 'thrace.general',
+  generalNames: ['Sitalces', 'Seuthes', 'Cotys', 'Kersobleptes', 'Syrmus', 'Teres'],
+  units: [
+    unit(
+      F,
+      'peltasts',
+      'Thracian Peltasts',
+      'The original peltasts: javelins and a crescent shield, fast enough to catch a hoplite in the open.',
+      'javelin',
+      { body: 'light', armor: 'none', helmet: 'phrygian', crest: 'none', shield: 'pelte', weapon: 'javelin', cloth: 'team', skin: 'light', hair: 'auburn', beard: true },
+      { atk: 28, def: 22, hp: 64, cost: 320, morale: 46 },
+    ),
+    unit(
+      F,
+      'rhomphaia',
+      'Rhomphaia Warriors',
+      'Two-handed swordsmen with the rhomphaia, a long curved blade on a long haft: no shield, but nothing stops the stroke.',
+      'swordsman',
+      { body: 'medium', armor: 'none', helmet: 'phrygian', crest: 'none', shield: 'none', weapon: 'rhomphaia', cloth: 'team', skin: 'light', hair: 'auburn', beard: true },
+      { shield: 0, def: 22, atk: 40, dmg: 38, ap: 16, bonusLarge: 10, cost: 520, reach: 1.8 },
+    ),
+    unit(F, 'tribesmen', 'Thracian Tribesmen', 'Clansmen with spears and wicker shields.', 'levy', {
+      body: 'light',
+      armor: 'none',
+      helmet: 'cap',
+      crest: 'none',
+      shield: 'pelte',
+      weapon: 'spear',
+      cloth: 'linen',
+      skin: 'light',
+      hair: 'fair',
+      beard: true,
+    }),
+    unit(F, 'horsearchers', 'Getic Horse Archers', 'Riders of the Danube plain who learnt the bow from the Scythians.', 'horseArcher', {
+      body: 'light',
+      armor: 'none',
+      helmet: 'hood',
+      crest: 'none',
+      shield: 'none',
+      weapon: 'bow',
+      cloth: 'team',
+      skin: 'light',
+      beard: true,
+      mount: 'horse',
+    }),
+    unit(F, 'cavalry', 'Thracian Cavalry', 'Javelin horsemen in fox-skin caps and patterned cloaks.', 'lightCav', {
+      body: 'light',
+      armor: 'none',
+      helmet: 'phrygian',
+      crest: 'none',
+      shield: 'small',
+      weapon: 'javelin',
+      cloth: 'team',
+      cape: 'team',
+      skin: 'light',
+      beard: true,
+      mount: 'darkhorse',
+    }),
+    unit(
+      F,
+      'bessi',
+      'Bessi Champions',
+      'The Bessi, wildest of the Thracians and keepers of the oracle of Dionysus, swinging the rhomphaia in great arcs.',
+      'eliteInf',
+      { body: 'heavy', armor: 'mail', helmet: 'phrygian', crest: 'feathers', shield: 'none', weapon: 'rhomphaia', cloth: 'team', cape: 'team', skin: 'light', hair: 'auburn', beard: true, greaves: true, tint: { helm: 'silver', trim: 'gold' } },
+      { shield: 0, def: 46, dmg: 46, ap: 20, reach: 1.8 },
+    ),
+    unit(F, 'general', "King's Companions", 'A Thracian king and his nobles, glittering with silver.', 'general', {
+      body: 'heavy',
+      armor: 'scale',
+      helmet: 'phrygian',
+      crest: 'none',
+      shield: 'small',
+      weapon: 'sword',
+      cloth: 'team',
+      cape: 'team',
+      skin: 'light',
+      beard: true,
+      mount: 'greyhorse',
+      tint: { helm: 'silver', trim: 'silver' },
+    }),
+  ],
+};
