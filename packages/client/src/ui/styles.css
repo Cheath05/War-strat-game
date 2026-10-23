@@ -1519,6 +1519,14 @@ section > .label:first-child::after {
 .allies-head .label {
   margin: 0;
 }
+.objective-list {
+  margin: 0;
+  padding-left: 16px;
+  max-width: 300px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
 .ally-row {
   display: flex;
   flex-direction: column;
@@ -1601,4 +1609,330 @@ section > .label:first-child::after {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-dim);
+}
+
+/* --- Campaigns ----------------------------------------------------------------------- */
+
+.notice.good {
+  border-left-color: var(--good);
+  color: #c6ecd0;
+}
+.glory {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.glory b {
+  color: var(--gold-hi);
+  font-weight: 400;
+}
+
+.window.campaigns {
+  width: min(96vw, 1060px);
+}
+.campaign-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.campaign-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: default;
+}
+.campaign-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.campaign-card-head canvas {
+  width: 52px;
+  height: 52px;
+  image-rendering: pixelated;
+}
+.campaign-card .label {
+  margin-bottom: 2px;
+}
+.campaign-progress {
+  font-size: 12px;
+}
+.window.new-campaign {
+  width: min(94vw, 760px);
+}
+.option-list.two {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+/* The campaign map: a road of battles left to right, then the briefing. */
+.window.campaign-map {
+  width: min(97vw, 1280px);
+}
+.campaign-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tree-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(8, 9, 12, 0.5);
+}
+.tree {
+  position: relative;
+}
+.tree-edges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.tree-edges .edge {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 2;
+}
+.tree-edges .edge.side {
+  stroke-dasharray: 5 5;
+}
+.tree-edges .edge.lit {
+  stroke: rgba(217, 171, 87, 0.75);
+}
+.cnode {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(26, 29, 35, 0.92);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    transform 0.12s;
+}
+.cnode:hover {
+  border-color: rgba(217, 171, 87, 0.5);
+}
+.cnode.locked {
+  opacity: 0.5;
+}
+.cnode.open {
+  border-color: rgba(217, 171, 87, 0.55);
+  box-shadow: 0 0 0 1px rgba(217, 171, 87, 0.18);
+}
+.cnode.won {
+  background: linear-gradient(180deg, rgba(217, 171, 87, 0.16), rgba(26, 29, 35, 0.92));
+}
+.cnode.sel {
+  border-color: var(--gold-hi);
+  box-shadow: 0 0 0 2px rgba(242, 205, 126, 0.35);
+}
+.cnode.final .cnode-name {
+  color: var(--gold-hi);
+}
+.cnode-year {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.cnode-year .tag {
+  font-size: 9px;
+  padding: 0 4px;
+}
+.cnode-name {
+  font-size: 14px;
+  line-height: 1.2;
+}
+.cnode-foe {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.cnode-stars,
+.cnode-state {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.cnode-stars b {
+  color: var(--gold-hi);
+  font-weight: 400;
+}
+.cnode-stars i {
+  font-style: normal;
+}
+.cnode.open .cnode-state {
+  color: var(--gold);
+}
+
+.briefing {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+  gap: 20px;
+}
+.briefing h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 400;
+}
+.briefing p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+.briefing-armies {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.briefing-army {
+  margin: 6px 0 8px;
+  font-size: 13px;
+}
+.briefing-army .dim {
+  font-size: 12px;
+}
+.briefing-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.briefing-side .btn.big {
+  margin-top: 8px;
+}
+.briefing-reward {
+  margin-top: 8px;
+  font-size: 14px;
+}
+.objective-list.big {
+  max-width: none;
+  font-size: 14px;
+}
+.objective-list li.ok {
+  color: var(--text);
+}
+@media (max-width: 760px) {
+  .briefing,
+  .briefing-armies {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The camp: the army, upgrades and troops. */
+.window.camp {
+  width: min(96vw, 980px);
+  /* The same height on every tab, so the tabs don't jump. */
+  height: min(calc(100vh - 76px), 820px);
+}
+.camp-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 22px 0;
+}
+.roster {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.roster-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 120px 44px auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: rgba(26, 29, 35, 0.6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+.roster-row canvas {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+.roster-row.elite {
+  border-color: rgba(242, 205, 126, 0.45);
+}
+.roster-row.compact {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+.roster-name .dim {
+  font-size: 12px;
+}
+.roster-str {
+  height: 6px;
+  background: var(--well);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.roster-str i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+.roster-pct {
+  font-size: 12px;
+  text-align: right;
+}
+/* Troops tab: name and description, then the unlock button. */
+.camp .roster-row:not(.compact):has(.roster-str) {
+  grid-template-columns: 36px minmax(0, 1fr) 120px 44px auto auto;
+}
+.camp .roster-row:not(:has(.roster-str)) {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+}
+.pips {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.pips i {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--gold);
+  border-radius: 1px;
+}
+.pips i.on {
+  background: var(--gold);
+}
+.upgrades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.upgrade-arm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.upgrade-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(26, 29, 35, 0.6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.window.rewards {
+  width: min(94vw, 720px);
+}
+@media (max-width: 640px) {
+  .roster-row,
+  .camp .roster-row:not(.compact):has(.roster-str) {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+  .roster-str,
+  .roster-pct {
+    display: none;
+  }
 }

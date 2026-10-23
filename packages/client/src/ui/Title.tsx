@@ -80,6 +80,9 @@ export function Title({ go }: { go: (s: Screen) => void }) {
             <button className="menu-item" disabled={!ok} onClick={() => setJoining(true)}>
               Join a game
             </button>
+            <button className="menu-item" disabled={!ok} onClick={() => (commit(), go({ k: 'campaigns' }))}>
+              Campaign
+            </button>
             <button className="menu-item" disabled={!ok} onClick={() => (commit(), go({ k: 'solo' }))}>
               Solo battle
             </button>
