@@ -43,3 +43,16 @@ Good examples: `data/maps/thermopylae.ts` and `data/scenarios/thermopylae.ts` (h
   - Helpers: `once(b, key)` for one-off events, `spawnReserve` and `spawnLate` for armies, `newDetachment` and `arrive` for single units, and `b.msg(text, tone, side)` for messages.
   - Set `world.scenario.vars.pending<side>` above 0 while a side still has troops to come, so it can't be called broken early.
 - **Try it headless:** `npm run battle -- <scenario> --seed 1 --difficulty 1 --log` prints the script's messages, the result and the timing.
+
+## Campaign battles
+
+Battles live in `data/campaigns/battles/*.ts`, one `BattleDef` each (`campaign/types.ts`); the five road maps are in `data/campaigns/campaigns.ts`. A battle is written once and played from either side.
+
+- **The field:** `map: { id: 'battlefield', params }`. The params draw the ground (see the top of `data/maps/battlefield.ts`): `g` for the ground, `river`/`at`/`deep`/`fords`/`bridge`, `lake`, `coast`, `hills`/`hillH`, `ridge`, `forest`/`wood`, `marsh`, `ravine`, `walls`, `pass`/`passWall`, `road`. Preview it with `tools/map-preview.ts`.
+- **The armies:** each side lists its armies with `army(general, title, faction, zone, 'type*n, ...', { ai, arrive, guard })` from `battles/kit.ts`. The first army of a side is the one the player leads; the others are AI allies the player can order.
+  - `ai` is the AI's directive. All-cavalry wings should `wait:N` (hold, then strike once the lines meet) rather than `assault`, or they charge alone and die.
+  - `arrive: s` brings an army on after s seconds (an ambush, a relief army, a flank march); the side can't lose before it comes.
+- **The story:** `history` for the briefing, `winner` (who won in history), `events` (messages at a time, for one side or both; `panic: { side, cls: ['ele'] }` stampedes that side's elephants or chariots then), `victory` (rout by default; `timer`, `general`) and `fog`.
+- **Bonus objectives:** three per side with the `won.*` helpers: `time`, `losses`, `general`, `kill`, `destroy`, `hold`, `kills`.
+- **Balance:** `npx tsx tools/campaign-balance.ts 0,1 <battle> --seeds 3` plays it with the AI leading the player's side. Aim for the player's side winning about half the time on Normal and nearly always on Easy. `--one-side` plays a shared battle from one side only (at Normal both sides fight the same battle), and `--detail` shows how each run ended.
+- **On the road:** add a node to the country's campaign: column, row (0 the main road, -1 and 1 side battles or a choice), the battles that open it, its Glory, and any troops it unlocks. `packages/sim/test/campaign.test.ts` checks every battle builds from both sides on dry ground.

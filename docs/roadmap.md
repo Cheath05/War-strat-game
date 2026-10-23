@@ -34,10 +34,10 @@ The approved plan for the first version is [plans/v1.md](plans/v1.md). Each mile
 
 1. **Skirmish:** annihilation on a random map.
 2. **Replays:** the seed plus the order log.
-3. **More historical battles:** Cannae, Gaugamela, Zama, Marathon, Plataea, Pydna.
+3. ~~**More historical battles:** Cannae, Gaugamela, Zama, Marathon, Plataea, Pydna.~~ Done in v1.6.0: 51 battles in the five campaigns.
 4. **Personal action combat** for captains.
-5. **A linked co-op campaign** with veterans, then a campaign map.
-6. **More factions:** Gauls and Germans, Egypt, Parthia.
+5. **A linked co-op campaign** with veterans, then a campaign map. The solo campaigns came in v1.6.0 (a road of battles, veterans, upgrades); co-op campaigns are next, and campaigns for the new countries.
+6. **More factions:** Parthia. (Gauls, Germans, Egypt and ten more came in v1.6.0.)
 7. **Bigger systems:** sieges, weather, night battles with torchlight, a map editor, gamepad support, spectator tools.
 
 ## Known polish items

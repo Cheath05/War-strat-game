@@ -11,6 +11,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.6.0',
+    date: '22 October 2026',
+    title: 'Campaigns',
+    items: [
+      'New: Campaigns (Campaign on the title screen). Lead Rome, Greece, Carthage, Persia or Macedon through 13 to 18 of their famous battles, from Marathon and Cannae to Gaugamela and Alesia, on a road read left to right, with side battles and choices along the way.',
+      'Four difficulties, Easy, Normal, Hard and Extreme, and two ways to keep an army: a veteran army whose survivors carry on from battle to battle and rise in rank as they kill, or a fresh army for every battle, starting from the one history gave you.',
+      'Every battle has three bonus objectives. Victories and objectives win Glory, which buys recruits and refills, upgrades (weapons, armour and drill for your infantry, missile troops and cavalry) and new troops, from the Praetorian Guard to war elephants.',
+      'Fight the battles your side lost too: win Cannae as Rome or Gaugamela as Persia, and history changes. Lose a battle and you can fight it again at no cost.',
+      'Thirteen new peoples to fight with and against, wherever you pick a country: Gauls, Samnites, Epirus, the Seleucid Empire, the Germanic tribes, Lydia, Babylon, Egypt, Scythia, Iberia, Thrace, Illyria and India, each with its own super unit. Rome gains the Legionary Cohort and Persia the Camel Archers.',
+      'New art for them: camels, armoured horses for cataphracts, Egyptian headdresses, conical helmets, the Thracian rhomphaia and the khopesh. Country lists are now a compact grid, so all eighteen fit.',
+      'Woods, rocky ground, marsh and shallows now break up a phalanx, testudo or shield wall: men standing there fight as a plain line.',
+    ],
+  },
+  {
     version: '1.5.2',
     date: '22 October 2026',
     title: 'A results screen that fits',

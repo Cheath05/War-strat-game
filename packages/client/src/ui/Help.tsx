@@ -97,6 +97,29 @@ export function Help({ back }: { back: () => void }) {
               country and units; the host sets up the armies the AI leads.
             </li>
           </ul>
+          <h3>Campaigns</h3>
+          <p>
+            <b>Campaign</b> on the title screen leads one country through its famous battles: Rome from Sentinum to Alesia, Greece from Marathon to Crannon,
+            Carthage from Himera to Zama, Persia from Thymbra to Gaugamela, Macedon from Philip's first victories to Pydna.
+          </p>
+          <ul>
+            <li>
+              <b>The map</b> reads left to right. Win a battle to open the next. Side battles above and below the road are optional, and where the road splits,
+              either battle opens the way on.
+            </li>
+            <li>
+              <b>Difficulty:</b> Easy, Normal, Hard or Extreme sets how big and how sharp the enemy is, and how much Glory you start with and earn.
+            </li>
+            <li>
+              <b>Your army:</b> a <b>veteran army</b> carries its survivors from battle to battle, and units that kill enough rise in rank and fight harder. With{' '}
+              <b>fresh armies</b>, each battle starts from the army history gave you, which you can change within the battle's budget.
+            </li>
+            <li>
+              <b>Glory</b> comes from victories and each battle's three bonus objectives (★). In camp, spend it to refill worn units and raise new ones, on
+              upgrades (weapons, armour and drill for your infantry, missile troops and cavalry) and to unlock new troops.
+            </li>
+            <li>Lose a battle and nothing is lost: fight it again. Win one your side lost in history, and history changes.</li>
+          </ul>
           <h3>Gold</h3>
           <p>
             In Last Stand and the objective battles, a General recruits the army before the battle (<b>Recruit army</b> in the lobby). What you don't spend, and the
@@ -116,9 +139,10 @@ export function Help({ back }: { back: () => void }) {
           </p>
           <h3>Super units</h3>
           <p>
-            Each faction has one: the Black Spartans, the Praetorian Guard, the Apple-Bearers, Hannibal's Veterans and the Silver Shields. They are bigger men in
-            gold-edged armour, nearly unbreakable, frighten enemies nearby and can Inspire their friends, and they cost a fortune. Recruit them in Last Stand and
-            the objective battles, and watch for them in the last waves of Last Stand.
+            Every country has one: the Black Spartans, the Praetorian Guard, the Apple-Bearers, Hannibal's Veterans, the Silver Shields, the Gauls' Naked
+            Fanatics, the Royal Elephants of India and more. They are bigger men in gold-edged armour, nearly unbreakable, frighten enemies nearby and can Inspire
+            their friends, and they cost a fortune. Recruit them in Last Stand, the objective battles and the Sandbox, unlock them in the campaigns, and watch for
+            them in the last waves of Last Stand.
           </p>
           <h3>Fog of war</h3>
           <p>
